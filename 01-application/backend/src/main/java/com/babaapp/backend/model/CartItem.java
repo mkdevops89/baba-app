@@ -1,47 +1,61 @@
 package com.babaapp.backend.model;
 
-import java.io.Serializable;
-import java.math.BigDecimal;
+import jakarta.persistence.*;
 
-public class CartItem implements Serializable {
-    private Long productId;
-    private String productName;
-    private BigDecimal price;
+@Entity
+@Table(name = "cart_items")
+public class CartItem {
+
+    @Id
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
+    private Long id;
+
+    @ManyToOne(fetch = FetchType.LAZY)
+    @JoinColumn(name = "user_id")
+    private User user;
+
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
+    @JoinColumn(name = "product_id", nullable = false)
+    private Product product;
+
+    @Column(nullable = false)
     private int quantity;
+
+    @Column(name = "session_id", length = 100)
+    private String sessionId;
 
     public CartItem() {
     }
 
-    public CartItem(Long productId, String productName, BigDecimal price, int quantity) {
-        this.productId = productId;
-        this.productName = productName;
-        this.price = price;
+    public CartItem(User user, Product product, int quantity, String sessionId) {
+        this.user = user;
+        this.product = product;
         this.quantity = quantity;
+        this.sessionId = sessionId;
     }
 
-    // Getters/Setters
-    public Long getProductId() {
-        return productId;
+    public Long getId() {
+        return id;
     }
 
-    public void setProductId(Long productId) {
-        this.productId = productId;
+    public void setId(Long id) {
+        this.id = id;
     }
 
-    public String getProductName() {
-        return productName;
+    public User getUser() {
+        return user;
     }
 
-    public void setProductName(String productName) {
-        this.productName = productName;
+    public void setUser(User user) {
+        this.user = user;
     }
 
-    public BigDecimal getPrice() {
-        return price;
+    public Product getProduct() {
+        return product;
     }
 
-    public void setPrice(BigDecimal price) {
-        this.price = price;
+    public void setProduct(Product product) {
+        this.product = product;
     }
 
     public int getQuantity() {
@@ -50,5 +64,13 @@ public class CartItem implements Serializable {
 
     public void setQuantity(int quantity) {
         this.quantity = quantity;
+    }
+
+    public String getSessionId() {
+        return sessionId;
+    }
+
+    public void setSessionId(String sessionId) {
+        this.sessionId = sessionId;
     }
 }
