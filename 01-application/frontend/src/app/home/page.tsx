@@ -1,65 +1,53 @@
 "use client";
 
-import { useEffect, useState } from 'react';
-import Navbar from '../../components/Navbar';
-import Hero from '../../components/Hero';
-import ProductCard from '../../components/ProductCard';
+import { Suspense, useEffect, useMemo, useState } from "react";
+import { useSearchParams } from "next/navigation";
+import Navbar from "../../components/Navbar";
+import HeroCarousel from "../../components/HeroCarousel";
+import ProductCard from "../../components/ProductCard";
+import { API_URL } from "../../services/api";
 
-interface Product {
-  id: number;
-  name: string;
-  price: number;
-  category: string;
-  imageUrl?: string;
+interface Product { id: number; name: string; description: string; price: number; imageUrl?: string; category: string; }
+
+function Storefront() {
+  const params = useSearchParams();
+  const search = params.get("search")?.trim() || "";
+  const [products, setProducts] = useState<Product[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(false);
+
+  useEffect(() => {
+    setLoading(true); setError(false);
+    const url = search ? `${API_URL}/products/search?q=${encodeURIComponent(search)}` : `${API_URL}/products`;
+    fetch(url)
+      .then((response) => { if (!response.ok) throw new Error(String(response.status)); return response.json(); })
+      .then((data) => setProducts(Array.isArray(data) ? data : []))
+      .catch((err) => { console.error(err); setError(true); })
+      .finally(() => setLoading(false));
+  }, [search]);
+
+  const heading = useMemo(() => search ? `Results for “${search}”` : "Featured products", [search]);
+
+  return (
+    <>
+      {!search && <HeroCarousel />}
+      <section style={{ maxWidth: 1450, margin: search ? "2rem auto" : "-5rem auto 0", position: "relative", zIndex: 10, padding: "0 1rem 3rem" }}>
+        <h2 style={{ margin: "0 0 1rem", fontSize: "1.35rem" }}>{heading}</h2>
+        {loading && <div style={stateStyle}>Loading products...</div>}
+        {error && <div style={stateStyle}>Unable to load products. Confirm the backend is running on port 8080.</div>}
+        {!loading && !error && products.length === 0 && <div style={stateStyle}>No products found.</div>}
+        {!loading && !error && products.length > 0 && (
+          <div style={{ display: "grid", gridTemplateColumns: "repeat(auto-fit, minmax(245px, 1fr))", gap: "1.15rem" }}>
+            {products.map((product) => <ProductCard key={product.id} id={product.id} title={product.name} price={Number(product.price)} category={product.category} image={product.imageUrl || "/images/default.jpg"} />)}
+          </div>
+        )}
+      </section>
+    </>
+  );
 }
 
 export default function Home() {
-  const [products, setProducts] = useState<Product[]>([]);
-  const [error, setError] = useState<string | null>(null);
-
-  useEffect(() => {
-    const apiUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8080/api';
-    fetch(`${apiUrl}/products`)
-      .then(res => {
-        if (!res.ok) throw new Error(`API returned ${res.status}`);
-        return res.json();
-      })
-      .then(data => setProducts(data))
-      .catch(err => {
-        console.error("Failed to fetch products:", err);
-        setError("Unable to load products. Confirm the backend is running on port 8080.");
-      });
-  }, []);
-
-  return (
-    <main style={{ minHeight: '100vh', paddingBottom: '2rem' }}>
-      <Navbar />
-      <Hero />
-
-      <div className="container" style={{ position: 'relative', zIndex: 10 }}>
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
-          gap: '1.5rem',
-          padding: '1rem'
-        }}>
-          {error ? (
-            <p className="text-center p-10">{error}</p>
-          ) : products.length === 0 ? (
-            <p className="text-center p-10">Loading products from Baba App API...</p>
-          ) : (
-            products.map(product => (
-              <ProductCard
-                key={product.id}
-                title={product.name}
-                price={product.price}
-                category={product.category}
-                image={product.imageUrl || "/images/default.jpg"}
-              />
-            ))
-          )}
-        </div>
-      </div>
-    </main>
-  );
+  return <main style={{ minHeight: "100vh", background: "#eaeded" }}><Navbar /><Suspense fallback={<div style={stateStyle}>Loading storefront...</div>}><Storefront /></Suspense></main>;
 }
+
+const stateStyle: React.CSSProperties = { background: "white", padding: "2.5rem", textAlign: "center", borderRadius: 4 };

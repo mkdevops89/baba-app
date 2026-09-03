@@ -1,0 +1,27 @@
+services:
+  backend:
+    build:
+      context: ..
+      dockerfile: 02-containerization/backend/Dockerfile
+    image: baba-app-backend:dev
+    container_name: baba-app-backend
+    ports:
+      - "8080:8080"
+    environment:
+      BABAAPP_CORS_ALLOWED_ORIGIN: http://localhost:3000
+   
+   
+
+  frontend:
+    build:
+      context: ..
+      dockerfile: 02-containerization/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080/api
+    image: baba-app-frontend:dev
+    container_name: baba-app-frontend
+    ports:
+      - "3000:3000"
+    depends_on:
+      backend:
+        condition: service_started
