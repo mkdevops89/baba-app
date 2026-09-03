@@ -11,7 +11,7 @@ RUN mvn dependency:go-offline -B
 
 COPY 01-application/backend/src ./src
 
-RUN mvn clean package -DskipTests
+RUN mvn clean package
 
 
 # =========================

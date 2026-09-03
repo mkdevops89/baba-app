@@ -16,12 +16,12 @@ services:
     build:
       context: ..
       dockerfile: 02-containerization/frontend/Dockerfile
+      args:
+        NEXT_PUBLIC_API_URL: http://localhost:8080/api
     image: baba-app-frontend:dev
     container_name: baba-app-frontend
     ports:
       - "3000:3000"
-    environment:
-      NEXT_PUBLIC_API_URL: http://localhost:8080/api
     depends_on:
       backend:
         condition: service_started
