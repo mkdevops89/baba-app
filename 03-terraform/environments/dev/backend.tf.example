@@ -3,7 +3,6 @@ terraform {
     bucket       = "REPLACE_WITH_TERRAFORM_STATE_BUCKET"
     key          = "environments/dev/terraform.tfstate"
     region       = "us-east-1"
-    profile      = "baba-admin"
     encrypt      = true
     use_lockfile = true
 
