@@ -82,3 +82,17 @@ output "eks_node_group_name" {
   description = "Name of the Baba App EKS managed node group"
   value       = module.eks.node_group_name
 }
+
+# -----------------------------------------------------------------------------
+# CI/CD IAM outputs
+# -----------------------------------------------------------------------------
+
+output "github_actions_cicd_role_arn" {
+  description = "IAM role ARN used by GitHub Actions through OIDC."
+  value       = module.cicd_iam.github_actions_role_arn
+}
+
+output "github_oidc_provider_arn" {
+  description = "GitHub Actions OIDC provider ARN."
+  value       = module.cicd_iam.github_oidc_provider_arn
+}
