@@ -1,0 +1,101 @@
+name: Infrastructure Security
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "03-terraform/**"
+      - "04-eks/**"
+      - ".github/workflows/infrastructure-security.yml"
+
+  push:
+    branches:
+      - "feature/**"
+      - "security/**"
+    paths:
+      - "03-terraform/**"
+      - "04-eks/**"
+      - ".github/workflows/infrastructure-security.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infrastructure-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform-checkov:
+    name: Terraform - Checkov
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for infrastructure security validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Terraform configuration for security and compliance misconfigurations.
+      - name: Run Checkov against Terraform
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: 03-terraform
+          framework: terraform
+          quiet: true
+          soft_fail: false
+
+  terraform-trivy:
+    name: Terraform - Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for infrastructure security validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Terraform files and fail when HIGH or CRITICAL misconfigurations are detected.
+      - name: Run Trivy against Terraform
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: config
+          scan-ref: 03-terraform
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+
+  kubernetes-checkov:
+    name: Kubernetes - Checkov
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for Kubernetes manifest validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Validate Kubernetes manifests against Checkov security policies.
+      - name: Run Checkov against Kubernetes manifests
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: 04-eks
+          framework: kubernetes
+          quiet: true
+          soft_fail: false
+
+  kubernetes-trivy:
+    name: Kubernetes - Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for Kubernetes manifest validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Kubernetes manifests and fail when HIGH or CRITICAL misconfigurations are detected.
+      - name: Run Trivy against Kubernetes manifests
+        uses: aquasecurity/trivy-action@0.33.1
+        with:
+          scan-type: config
+          scan-ref: 04-eks
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
