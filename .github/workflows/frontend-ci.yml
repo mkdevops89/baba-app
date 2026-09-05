@@ -1,0 +1,57 @@
+name: Frontend CI
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "01-application/frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+  push:
+    branches:
+      - "feature/**"
+    paths:
+      - "01-application/frontend/**"
+      - ".github/workflows/frontend-ci.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: frontend-ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  frontend-build-validation:
+    name: Frontend Build Validation
+    runs-on: ubuntu-latest
+
+    defaults:
+      run:
+        working-directory: 01-application/frontend
+
+    steps:
+      # Pull the repository content required for the frontend validation workflow.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Configure the Node.js runtime used by the Baba App frontend.
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: npm
+          cache-dependency-path: 01-application/frontend/package-lock.json
+
+      # Install exactly the dependency versions recorded in the lock file.
+      - name: Install dependencies
+        run: npm ci
+
+      # Run ESLint as a required source-quality gate.
+      - name: Lint frontend
+        run: npm run lint
+
+      # Create the production Next.js build to verify the application compiles successfully.
+      - name: Build frontend
+        run: npm run build

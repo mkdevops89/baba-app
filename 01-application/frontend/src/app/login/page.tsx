@@ -74,7 +74,7 @@ export default function LoginPage() {
                 </form>
 
                 <div style={{ marginTop: '1.5rem', fontSize: '0.8rem' }}>
-                    By continuing, you agree to Baba App's <Link href="#" style={{ color: '#007185' }}>Conditions of Use</Link> and <Link href="#" style={{ color: '#007185' }}>Privacy Notice</Link>.
+                    By continuing, you agree to Baba App&apos;s <Link href="#" style={{ color: '#007185' }}>Conditions of Use</Link> and <Link href="#" style={{ color: '#007185' }}>Privacy Notice</Link>.
                 </div>
             </div>
 
