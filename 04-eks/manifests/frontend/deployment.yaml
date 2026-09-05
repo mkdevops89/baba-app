@@ -55,7 +55,7 @@ spec:
             - containerPort: 3000
               protocol: TCP
 
-                    # Readiness probe
+          # Readiness probe
           # Uses /login because the root route intentionally redirects there.
           readinessProbe:
             httpGet:

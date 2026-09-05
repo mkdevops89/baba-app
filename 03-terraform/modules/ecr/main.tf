@@ -12,8 +12,8 @@ resource "aws_ecr_repository" "frontend" {
   }
 
   encryption_configuration {
-  encryption_type = "KMS"
-  kms_key         = aws_kms_key.ecr.arn
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 
   tags = {
@@ -34,8 +34,8 @@ resource "aws_ecr_repository" "backend" {
   }
 
   encryption_configuration {
-  encryption_type = "KMS"
-  kms_key         = aws_kms_key.ecr.arn
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 
   tags = {
