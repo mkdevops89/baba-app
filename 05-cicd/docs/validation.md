@@ -269,4 +269,5 @@ reviewed and classified. Global soft-fail behavior is not enabled.
 | Checkov | CKV_AWS_111 | Accepted | Reviewed KMS key-policy account administration statement. |
 | Checkov | CKV_AWS_356 | Accepted | KMS key policies use resource "*" to refer to the KMS key controlled by the policy. |
 | Checkov | CKV2_K8S_6 | Deferred | Kubernetes NetworkPolicies are scheduled for Phase 14. |
+| Trivy | AWS-0039 | Accepted / deferred | EKS 1.36 uses AWS-managed default envelope encryption; customer-managed KMS encryption is deferred to later production/compliance hardening. |
 | Trivy | AWS-0040 / AWS-0041 | Accepted - dev | EKS public API is explicitly CIDR-restricted and paired with private endpoint access. |

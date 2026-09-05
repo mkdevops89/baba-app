@@ -46,7 +46,12 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 # development environment and restricted to explicitly approved /32 CIDRs.
 # Private API access remains enabled. Production hardening can move to
 # private-only control-plane access.
-# trivy:ignore:AWS-0040 trivy:ignore:AWS-0041
+# Trivy exceptions:
+# - AWS-0040 / AWS-0041: public API access is intentionally retained for dev
+#   administration and restricted to approved /32 CIDRs with private access enabled.
+# - AWS-0039: EKS 1.36 uses AWS-managed default envelope encryption for Kubernetes
+#   API data; customer-managed KMS encryption is deferred to later hardening.
+# trivy:ignore:AWS-0039 trivy:ignore:AWS-0040 trivy:ignore:AWS-0041
 resource "aws_eks_cluster" "this" {
   name     = "${var.project_name}-${var.environment}-eks"
   role_arn = aws_iam_role.cluster.arn
