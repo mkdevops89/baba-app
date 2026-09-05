@@ -1,0 +1,114 @@
+# -----------------------------------------------------------------------------
+# Baba App Backend Deployment
+# -----------------------------------------------------------------------------
+# Runs the Spring Boot backend on EKS using the Phase 04 image stored in ECR.
+# The workload is deployed into the dedicated baba-app namespace.
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: baba-app-backend
+  namespace: baba-app
+  labels:
+    app: baba-app-backend
+
+spec:
+  replicas: 2
+
+  selector:
+    matchLabels:
+      app: baba-app-backend
+
+  template:
+    metadata:
+      labels:
+        app: baba-app-backend
+
+    spec:
+      # -----------------------------------------------------------------------
+      # Pod Security Context
+      # -----------------------------------------------------------------------
+      # Enforces non-root execution and the Kubernetes RuntimeDefault seccomp
+      # profile for all containers in this pod.
+      securityContext:
+        runAsNonRoot: true
+        runAsUser: 65532
+        runAsGroup: 65532
+        seccompProfile:
+          type: RuntimeDefault
+
+      # The application does not call the Kubernetes API, so the default
+      # service account token does not need to be mounted into the pod.
+      automountServiceAccountToken: false
+
+      # Provides a dedicated writable temporary directory while preserving
+      # the container's read-only root filesystem.
+      volumes:
+        - name: tmp
+          emptyDir: {}
+
+      containers:
+        - name: backend
+
+          # Phase 04 backend image stored in Amazon ECR.
+          image: 406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-backend@sha256:71470b41e14875711819a19a05d5f056f0354153e4409bf240edf75a1eb52131
+          imagePullPolicy: Always
+
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+
+          # Java/Spring may require writable temporary storage during startup.
+          # Only /tmp is writable; the remainder of the root filesystem stays
+          # read-only.
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+
+          # Readiness probe
+          # Confirms the backend is ready to receive traffic before Kubernetes
+          # adds the pod to the Service endpoints.
+          readinessProbe:
+            httpGet:
+              path: /api/products
+              port: 8080
+            initialDelaySeconds: 10
+            periodSeconds: 10
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # Liveness probe
+          # Restarts the container if the application becomes unresponsive.
+          livenessProbe:
+            httpGet:
+              path: /api/products
+              port: 8080
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            timeoutSeconds: 3
+            failureThreshold: 3
+
+          # -------------------------------------------------------------------
+          # Container Security Context
+          # -------------------------------------------------------------------
+          # Prevents privilege escalation, removes unnecessary Linux
+          # capabilities, and makes the container filesystem immutable.
+          securityContext:
+            allowPrivilegeEscalation: false
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
+            readOnlyRootFilesystem: true
+            capabilities:
+              drop:
+                - ALL
+
+          # Resource requests provide predictable scheduling.
+          # Limits prevent one container from consuming excessive node resources.
+          resources:
+            requests:
+              cpu: "100m"
+              memory: "256Mi"
+            limits:
+              cpu: "500m"
+              memory: "512Mi"

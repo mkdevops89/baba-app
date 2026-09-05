@@ -1,3 +1,9 @@
+# -----------------------------------------------------------------------------
+# VPC
+# -----------------------------------------------------------------------------
+# Creates the primary Baba App development VPC.
+# DNS support and hostnames are enabled for AWS service discovery and future EKS
+# workloads.
 resource "aws_vpc" "this" {
   cidr_block           = var.vpc_cidr
   enable_dns_support   = true
@@ -8,9 +14,16 @@ resource "aws_vpc" "this" {
   }
 }
 
+
+# Retrieve the current AWS account ID.
+# Used when constructing resource-specific KMS policies without hard-coding
+# account identifiers.
 data "aws_caller_identity" "current" {}
 
-// Add internet gateway //
+# -----------------------------------------------------------------------------
+# Internet Gateway
+# -----------------------------------------------------------------------------
+# Provides internet connectivity for resources that use the public route table.
 resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
@@ -19,7 +32,15 @@ resource "aws_internet_gateway" "this" {
   }
 }
 
-// Add public and private subnets //
+# -----------------------------------------------------------------------------
+# Public Subnets
+# -----------------------------------------------------------------------------
+# Public subnets span multiple Availability Zones and are intended for resources
+# such as load balancers and the NAT Gateway.
+#
+# Automatic public IPv4 assignment is intentionally disabled to reduce
+# accidental resource exposure. A subnet is still considered public because its
+# route table contains a default route through the Internet Gateway.
 resource "aws_subnet" "public" {
   count = length(var.public_subnet_cidrs)
 
@@ -35,6 +56,11 @@ resource "aws_subnet" "public" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Private Subnets
+# -----------------------------------------------------------------------------
+# Private subnets are intended for application workloads and EKS worker nodes.
+# They do not have a direct route to the Internet Gateway.
 resource "aws_subnet" "private" {
   count = length(var.private_subnet_cidrs)
 
@@ -49,7 +75,10 @@ resource "aws_subnet" "private" {
   }
 }
 
-// Add public route table //
+# -----------------------------------------------------------------------------
+# Public Routing
+# -----------------------------------------------------------------------------
+# Public route table used by both public subnets.
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
@@ -58,12 +87,14 @@ resource "aws_route_table" "public" {
   }
 }
 
+# Routes internet-bound traffic from public subnets through the Internet Gateway.
 resource "aws_route" "public_internet_access" {
   route_table_id         = aws_route_table.public.id
   destination_cidr_block = "0.0.0.0/0"
   gateway_id             = aws_internet_gateway.this.id
 }
 
+# Associates all public subnets with the public route table.
 resource "aws_route_table_association" "public" {
   count = length(aws_subnet.public)
 
@@ -71,7 +102,10 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
-// Add NAT Gateway //
+# -----------------------------------------------------------------------------
+# NAT Gateway
+# -----------------------------------------------------------------------------
+# Elastic IP assigned to the NAT Gateway.
 resource "aws_eip" "nat" {
   domain = "vpc"
 
@@ -80,6 +114,9 @@ resource "aws_eip" "nat" {
   }
 }
 
+# A single NAT Gateway is used for the development environment to reduce cost.
+# A production architecture would typically deploy one NAT Gateway per
+# Availability Zone for improved resiliency.
 resource "aws_nat_gateway" "this" {
   allocation_id = aws_eip.nat.id
   subnet_id     = aws_subnet.public[0].id
@@ -93,7 +130,11 @@ resource "aws_nat_gateway" "this" {
   }
 }
 
-// Create the private route table //
+# -----------------------------------------------------------------------------
+# Private Routing
+# -----------------------------------------------------------------------------
+# Private route table shared by the private subnets in the development
+# environment.
 resource "aws_route_table" "private" {
   vpc_id = aws_vpc.this.id
 
@@ -102,13 +143,14 @@ resource "aws_route_table" "private" {
   }
 }
 
+# Routes outbound internet traffic from private subnets through the NAT Gateway.
 resource "aws_route" "private_nat_access" {
   route_table_id         = aws_route_table.private.id
   destination_cidr_block = "0.0.0.0/0"
   nat_gateway_id         = aws_nat_gateway.this.id
 }
 
-// Associate both private Subnets //
+# Associates all private subnets with the private route table.
 resource "aws_route_table_association" "private" {
   count = length(aws_subnet.private)
 
@@ -116,17 +158,26 @@ resource "aws_route_table_association" "private" {
   route_table_id = aws_route_table.private.id
 }
 
-// VPC Flow Logs //
+# -----------------------------------------------------------------------------
+# VPC Flow Log - CloudWatch Log Group
+# -----------------------------------------------------------------------------
+# Stores VPC Flow Logs for network visibility and security analysis.
+# Logs are retained for one year and encrypted with a dedicated customer-managed
+# KMS key.
 resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   name              = "/aws/vpc/${var.project_name}-${var.environment}/flow-logs"
   retention_in_days = 365
-  kms_key_id         = aws_kms_key.vpc_flow_logs.arn
+  kms_key_id        = aws_kms_key.vpc_flow_logs.arn
 
   tags = {
     Name = "${var.project_name}-${var.environment}-vpc-flow-logs"
   }
 }
 
+# -----------------------------------------------------------------------------
+# VPC Flow Log IAM Role
+# -----------------------------------------------------------------------------
+# Dedicated IAM role assumed only by the VPC Flow Logs service.
 resource "aws_iam_role" "vpc_flow_logs" {
   name = "${var.project_name}-${var.environment}-vpc-flow-logs-role"
 
@@ -151,6 +202,11 @@ resource "aws_iam_role" "vpc_flow_logs" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# VPC Flow Log IAM Policy
+# -----------------------------------------------------------------------------
+# Grants only the CloudWatch Logs permissions required to deliver VPC Flow Logs.
+# Access is scoped to the Baba App Flow Log Log Group.
 resource "aws_iam_role_policy" "vpc_flow_logs" {
   name = "${var.project_name}-${var.environment}-vpc-flow-logs-policy"
   role = aws_iam_role.vpc_flow_logs.id
@@ -175,6 +231,10 @@ resource "aws_iam_role_policy" "vpc_flow_logs" {
   })
 }
 
+# -----------------------------------------------------------------------------
+# VPC Flow Logs
+# -----------------------------------------------------------------------------
+# Captures accepted and rejected network traffic for the entire VPC.
 resource "aws_flow_log" "this" {
   iam_role_arn    = aws_iam_role.vpc_flow_logs.arn
   log_destination = aws_cloudwatch_log_group.vpc_flow_logs.arn
@@ -186,7 +246,11 @@ resource "aws_flow_log" "this" {
   }
 }
 
-// KMS key for Flow logs//
+# -----------------------------------------------------------------------------
+# VPC Flow Log KMS Key
+# -----------------------------------------------------------------------------
+# Customer-managed KMS key used to encrypt the CloudWatch Log Group containing
+# VPC Flow Logs.
 resource "aws_kms_key" "vpc_flow_logs" {
   description             = "KMS key for Baba App VPC Flow Logs"
   deletion_window_in_days = 30

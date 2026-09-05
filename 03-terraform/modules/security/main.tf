@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Internal Application Security Group
+# -----------------------------------------------------------------------------
+# Security group for Baba App application workloads.
+# Application ingress is restricted to resources originating inside the VPC.
 resource "aws_security_group" "internal_app" {
   name        = "${var.project_name}-${var.environment}-internal-app-sg"
   description = "Internal application traffic for Baba App"
@@ -8,7 +13,10 @@ resource "aws_security_group" "internal_app" {
   }
 }
 
-// backend rules//
+# -----------------------------------------------------------------------------
+# Backend Application Ingress
+# -----------------------------------------------------------------------------
+# Allows backend application traffic on TCP/8080 only from within the VPC.
 resource "aws_vpc_security_group_ingress_rule" "backend" {
   security_group_id = aws_security_group.internal_app.id
 
@@ -20,7 +28,10 @@ resource "aws_vpc_security_group_ingress_rule" "backend" {
   ip_protocol = "tcp"
 }
 
-// frontend rules //
+# -----------------------------------------------------------------------------
+# Frontend Application Ingress
+# -----------------------------------------------------------------------------
+# Allows frontend application traffic on TCP/3000 only from within the VPC.
 resource "aws_vpc_security_group_ingress_rule" "frontend" {
   security_group_id = aws_security_group.internal_app.id
 
@@ -32,7 +43,15 @@ resource "aws_vpc_security_group_ingress_rule" "frontend" {
   ip_protocol = "tcp"
 }
 
-// outbound https //
+# -----------------------------------------------------------------------------
+# Outbound HTTPS
+# -----------------------------------------------------------------------------
+# Allows application workloads to reach AWS APIs, registries, package
+# repositories, and external HTTPS services.
+#
+# The destination is currently unrestricted for TCP/443 and is documented as an
+# accepted development-environment risk. Future phases can reduce this exposure
+# using VPC endpoints and more restrictive egress controls.
 resource "aws_vpc_security_group_egress_rule" "https" {
   security_group_id = aws_security_group.internal_app.id
 

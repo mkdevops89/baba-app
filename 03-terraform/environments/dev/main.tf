@@ -1,3 +1,7 @@
+# -----------------------------------------------------------------------------
+# VPC Foundation
+# -----------------------------------------------------------------------------
+# Creates the networking foundation used by all Baba App development workloads.
 module "vpc" {
   source = "../../modules/vpc"
 
@@ -9,6 +13,10 @@ module "vpc" {
   private_subnet_cidrs = var.private_subnet_cidrs
 }
 
+# -----------------------------------------------------------------------------
+# Application Network Security
+# -----------------------------------------------------------------------------
+# Creates security-group controls for internal frontend and backend workloads.
 module "security" {
   source = "../../modules/security"
 
@@ -19,9 +27,30 @@ module "security" {
   vpc_cidr = module.vpc.vpc_cidr
 }
 
+# -----------------------------------------------------------------------------
+# Container Registries
+# -----------------------------------------------------------------------------
+# Creates secure ECR repositories for frontend and backend container images.
 module "ecr" {
   source = "../../modules/ecr"
 
   project_name = var.project_name
   environment  = var.environment
+}
+
+# -----------------------------------------------------------------------------
+# Amazon EKS
+# -----------------------------------------------------------------------------
+# Creates the Kubernetes control plane and managed worker-node foundation.
+# Worker nodes use the private subnets created by the VPC module.
+#
+# Public API access is restricted to explicitly approved administrator CIDRs,
+# while private API access remains enabled for in-VPC communication.
+module "eks" {
+  source = "../../modules/eks"
+
+  project_name                = var.project_name
+  environment                 = var.environment
+  private_subnet_ids          = module.vpc.private_subnet_ids
+  cluster_public_access_cidrs = var.cluster_public_access_cidrs
 }

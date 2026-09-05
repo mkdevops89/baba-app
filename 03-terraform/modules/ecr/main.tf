@@ -1,3 +1,8 @@
+# -----------------------------------------------------------------------------
+# Frontend ECR Repository
+# -----------------------------------------------------------------------------
+# Stores Baba App frontend container images.
+# Immutable tags prevent existing image tags from being overwritten.
 resource "aws_ecr_repository" "frontend" {
   name                 = "${var.project_name}-${var.environment}-frontend"
   image_tag_mutability = "IMMUTABLE"
@@ -7,8 +12,8 @@ resource "aws_ecr_repository" "frontend" {
   }
 
   encryption_configuration {
-  encryption_type = "KMS"
-  kms_key         = aws_kms_key.ecr.arn
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 
   tags = {
@@ -16,6 +21,10 @@ resource "aws_ecr_repository" "frontend" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Backend ECR Repository
+# -----------------------------------------------------------------------------
+# Stores Baba App backend container images.
 resource "aws_ecr_repository" "backend" {
   name                 = "${var.project_name}-${var.environment}-backend"
   image_tag_mutability = "IMMUTABLE"
@@ -25,8 +34,8 @@ resource "aws_ecr_repository" "backend" {
   }
 
   encryption_configuration {
-  encryption_type = "KMS"
-  kms_key         = aws_kms_key.ecr.arn
+    encryption_type = "KMS"
+    kms_key         = aws_kms_key.ecr.arn
   }
 
   tags = {
@@ -34,7 +43,11 @@ resource "aws_ecr_repository" "backend" {
   }
 }
 
-// customer-managed KMS key for ECR //
+# -----------------------------------------------------------------------------
+# ECR KMS Encryption
+# -----------------------------------------------------------------------------
+# Dedicated customer-managed KMS key shared by the frontend and backend ECR
+# repositories.
 resource "aws_kms_key" "ecr" {
   description             = "KMS key for Baba App ECR repositories"
   deletion_window_in_days = 30
@@ -45,12 +58,17 @@ resource "aws_kms_key" "ecr" {
   }
 }
 
+# Friendly alias for the ECR KMS key.
 resource "aws_kms_alias" "ecr" {
   name          = "alias/${var.project_name}-${var.environment}-ecr"
   target_key_id = aws_kms_key.ecr.key_id
 }
 
-// add lifecycle policies //
+# -----------------------------------------------------------------------------
+# Frontend ECR Lifecycle Policy
+# -----------------------------------------------------------------------------
+# Keeps repository storage under control by retaining only the most recent
+# 20 images.
 resource "aws_ecr_lifecycle_policy" "frontend" {
   repository = aws_ecr_repository.frontend.name
 
@@ -74,6 +92,10 @@ resource "aws_ecr_lifecycle_policy" "frontend" {
   })
 }
 
+# -----------------------------------------------------------------------------
+# Backend ECR Lifecycle Policy
+# -----------------------------------------------------------------------------
+# Applies the same 20-image retention strategy to backend images.
 resource "aws_ecr_lifecycle_policy" "backend" {
   repository = aws_ecr_repository.backend.name
 

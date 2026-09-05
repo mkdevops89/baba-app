@@ -1,0 +1,15 @@
+# -----------------------------------------------------------------------------
+# Baba App Namespace
+# -----------------------------------------------------------------------------
+# Provides logical isolation for Baba App workloads and keeps application
+# resources separate from Kubernetes system components.
+
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: baba-app
+
+  labels:
+    app.kubernetes.io/name: baba-app
+    app.kubernetes.io/part-of: baba-app
+    environment: dev
