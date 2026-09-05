@@ -14,20 +14,6 @@ module "vpc" {
 }
 
 # -----------------------------------------------------------------------------
-# Application Network Security
-# -----------------------------------------------------------------------------
-# Creates security-group controls for internal frontend and backend workloads.
-module "security" {
-  source = "../../modules/security"
-
-  project_name = var.project_name
-  environment  = var.environment
-
-  vpc_id   = module.vpc.vpc_id
-  vpc_cidr = module.vpc.vpc_cidr
-}
-
-# -----------------------------------------------------------------------------
 # Container Registries
 # -----------------------------------------------------------------------------
 # Creates secure ECR repositories for frontend and backend container images.

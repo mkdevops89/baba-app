@@ -43,6 +43,31 @@ resource "aws_ecr_repository" "backend" {
   }
 }
 
+# Retrieve the current AWS account ID so the KMS policy can authorize the
+# account root principal without hard-coding an account identifier.
+data "aws_caller_identity" "current" {}
+
+data "aws_iam_policy_document" "ecr_kms" {
+  statement {
+    sid    = "EnableAccountPermissions"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+
+    actions = [
+      "kms:*"
+    ]
+
+    resources = ["*"]
+  }
+}
+
 # -----------------------------------------------------------------------------
 # ECR KMS Encryption
 # -----------------------------------------------------------------------------
@@ -52,6 +77,7 @@ resource "aws_kms_key" "ecr" {
   description             = "KMS key for Baba App ECR repositories"
   deletion_window_in_days = 30
   enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.ecr_kms.json
 
   tags = {
     Name = "${var.project_name}-${var.environment}-ecr-kms"

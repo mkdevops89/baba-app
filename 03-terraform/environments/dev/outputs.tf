@@ -43,11 +43,6 @@ output "nat_eip" {
   value       = module.vpc.nat_eip
 }
 
-output "internal_app_security_group_id" {
-  description = "Internal Baba App security group ID"
-  value       = module.security.internal_app_security_group_id
-}
-
 output "frontend_ecr_repository_url" {
   description = "Frontend ECR repository URL"
   value       = module.ecr.frontend_repository_url
