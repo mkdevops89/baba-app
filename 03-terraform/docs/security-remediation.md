@@ -808,10 +808,6 @@ Phase 04 - Amazon EKS
 
 ```
 
-
-
-#
-
 ---
 
 # Phase 04 - EKS Security Scan Review

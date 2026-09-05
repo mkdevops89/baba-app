@@ -305,11 +305,11 @@ Examples may include:
 module.eks.aws_eks_cluster.this
 module.eks.aws_eks_node_group.this
 module.eks.aws_iam_role.cluster
-module.eks.aws_iam_role.node
+module.eks.aws_iam_role.nodes
 module.eks.aws_iam_role_policy_attachment.cluster_policy
-module.eks.aws_iam_role_policy_attachment.worker_node_policy
+module.eks.aws_iam_role_policy_attachment.worker_node
 module.eks.aws_iam_role_policy_attachment.ecr_read_only
-module.eks.aws_iam_role_policy_attachment.cni_policy
+module.eks.aws_iam_role_policy_attachment.cni
 ```
 
 Exact resource names depend on the Terraform module implementation.

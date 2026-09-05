@@ -46,4 +46,13 @@ variable "node_max_size" {
 variable "cluster_public_access_cidrs" {
   description = "CIDR blocks allowed to access the public EKS API endpoint"
   type        = list(string)
+
+  validation {
+    condition = alltrue([
+      for cidr in var.cluster_public_access_cidrs :
+      cidr != "0.0.0.0/0" && cidr != "::/0"
+    ])
+
+    error_message = "EKS public API access must not allow 0.0.0.0/0 or ::/0."
+  }
 }
