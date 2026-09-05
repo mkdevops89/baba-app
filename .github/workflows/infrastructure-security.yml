@@ -39,7 +39,7 @@ jobs:
       - name: Run Checkov against Terraform
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: 03-terraform
+          directory: 03-terraform/environments/dev
           framework: terraform
           quiet: true
           soft_fail: false
@@ -55,10 +55,10 @@ jobs:
 
       # Scan Terraform files and fail when HIGH or CRITICAL misconfigurations are detected.
       - name: Run Trivy against Terraform
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
-          scan-ref: 03-terraform
+          scan-ref: 03-terraform/environments/dev
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: false
@@ -92,7 +92,7 @@ jobs:
 
       # Scan Kubernetes manifests and fail when HIGH or CRITICAL misconfigurations are detected.
       - name: Run Trivy against Kubernetes manifests
-        uses: aquasecurity/trivy-action@0.33.1
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
           scan-ref: 04-eks
