@@ -254,3 +254,19 @@ Additional validation will be added as Phase 05 introduces:
 - Artifact signing
 - AWS OIDC authentication
 - Amazon ECR publishing
+
+## Infrastructure Security Exception Register
+
+The CI/CD security gate uses targeted exceptions only after findings are
+reviewed and classified. Global soft-fail behavior is not enabled.
+
+| Scanner | Finding | Disposition | Rationale |
+| --- | --- | --- | --- |
+| Checkov | CKV_AWS_39 | Accepted - dev | EKS public API retained for development administration; access restricted to approved /32 CIDRs and private endpoint remains enabled. |
+| Checkov | CKV_AWS_58 | Accepted / deferred | EKS 1.36 receives AWS-managed default envelope encryption; customer-managed KMS encryption is deferred to later production/compliance hardening. |
+| Checkov | CKV_AWS_339 | Scanner limitation | EKS 1.36 is currently supported by AWS. |
+| Checkov | CKV_AWS_109 | Accepted | Reviewed KMS key-policy account administration statement. |
+| Checkov | CKV_AWS_111 | Accepted | Reviewed KMS key-policy account administration statement. |
+| Checkov | CKV_AWS_356 | Accepted | KMS key policies use resource "*" to refer to the KMS key controlled by the policy. |
+| Checkov | CKV2_K8S_6 | Deferred | Kubernetes NetworkPolicies are scheduled for Phase 14. |
+| Trivy | AWS-0040 / AWS-0041 | Accepted - dev | EKS public API is explicitly CIDR-restricted and paired with private endpoint access. |
