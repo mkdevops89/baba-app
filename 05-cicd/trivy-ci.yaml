@@ -1,0 +1,4 @@
+misconfiguration:
+  terraform:
+    vars:
+      - 03-terraform/environments/dev/terraform.tfvars.example

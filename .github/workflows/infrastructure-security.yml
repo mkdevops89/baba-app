@@ -41,6 +41,7 @@ jobs:
         with:
           directory: 03-terraform/environments/dev
           framework: terraform
+          var_file: 03-terraform/environments/dev/terraform.tfvars.example
           quiet: true
           soft_fail: false
 
@@ -59,6 +60,7 @@ jobs:
         with:
           scan-type: config
           scan-ref: 03-terraform/environments/dev
+          trivy-config: 05-cicd/trivy-ci.yaml
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: false
