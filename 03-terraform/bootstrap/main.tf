@@ -1,3 +1,11 @@
+# -----------------------------------------------------------------------------
+# Terraform Remote State Bucket
+# -----------------------------------------------------------------------------
+# Stores Terraform state remotely so infrastructure state is not dependent on a
+# developer workstation.
+#
+# prevent_destroy protects this security-critical bucket from accidental
+# Terraform deletion.
 resource "aws_s3_bucket" "terraform_state" {
   bucket = var.state_bucket_name
 
@@ -6,6 +14,11 @@ resource "aws_s3_bucket" "terraform_state" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Terraform State Versioning
+# -----------------------------------------------------------------------------
+# Versioning provides recovery capability if the Terraform state object is
+# accidentally overwritten or corrupted.
 resource "aws_s3_bucket_versioning" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -14,6 +27,10 @@ resource "aws_s3_bucket_versioning" "terraform_state" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Terraform State Encryption
+# -----------------------------------------------------------------------------
+# Encrypts Terraform state using a dedicated customer-managed AWS KMS key.
 resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -25,6 +42,10 @@ resource "aws_s3_bucket_server_side_encryption_configuration" "terraform_state" 
   }
 }
 
+# -----------------------------------------------------------------------------
+# Terraform State Public Access Protection
+# -----------------------------------------------------------------------------
+# Prevents public ACLs and bucket policies from exposing Terraform state.
 resource "aws_s3_bucket_public_access_block" "terraform_state" {
   bucket = aws_s3_bucket.terraform_state.id
 
@@ -34,7 +55,10 @@ resource "aws_s3_bucket_public_access_block" "terraform_state" {
   restrict_public_buckets = true
 }
 
-// Add KMS key //
+# -----------------------------------------------------------------------------
+# Terraform State KMS Key
+# -----------------------------------------------------------------------------
+# Dedicated customer-managed encryption key for the Terraform state bucket.
 resource "aws_kms_key" "terraform_state" {
   description             = "KMS key for Baba App Terraform state"
   deletion_window_in_days = 30
@@ -45,6 +69,7 @@ resource "aws_kms_key" "terraform_state" {
   }
 }
 
+# Friendly alias for the Terraform state KMS key.
 resource "aws_kms_alias" "terraform_state" {
   name          = "alias/${var.project_name}-${var.environment}-terraform-state"
   target_key_id = aws_kms_key.terraform_state.key_id

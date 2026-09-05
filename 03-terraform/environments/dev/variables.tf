@@ -57,3 +57,9 @@ variable "private_subnet_cidrs" {
     "10.0.12.0/24"
   ]
 }
+
+variable "cluster_public_access_cidrs" {
+  description = "CIDR blocks allowed to access the public EKS API endpoint"
+  type        = list(string)
+
+}

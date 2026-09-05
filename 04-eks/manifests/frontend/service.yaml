@@ -1,0 +1,22 @@
+# -----------------------------------------------------------------------------
+# Baba App Frontend Service
+# -----------------------------------------------------------------------------
+# Provides a stable internal ClusterIP and DNS name for the frontend pods.
+
+apiVersion: v1
+kind: Service
+metadata:
+  name: baba-app-frontend
+  namespace: baba-app
+
+spec:
+  type: ClusterIP
+
+  selector:
+    app: baba-app-frontend
+
+  ports:
+    - name: http
+      protocol: TCP
+      port: 3000
+      targetPort: 3000
