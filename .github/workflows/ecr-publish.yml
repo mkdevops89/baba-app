@@ -1,0 +1,107 @@
+name: ECR Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "01-application/**"
+      - "02-containerization/**"
+      - ".github/workflows/ecr-publish.yml"
+
+permissions:
+  contents: read
+  id-token: write
+
+concurrency:
+  group: ecr-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  BACKEND_REPOSITORY: baba-app-dev-backend
+  FRONTEND_REPOSITORY: baba-app-dev-frontend
+
+jobs:
+  publish:
+    name: Build and Publish to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve the exact source revision that will be represented by the
+      # published container images.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Exchange GitHub's short-lived OIDC identity for temporary AWS
+      # credentials. No long-lived AWS access keys are stored in GitHub.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::406312601212:role/baba-app-dev-github-actions-cicd
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Authenticate Docker to the Amazon ECR registry using temporary AWS
+      # credentials obtained through OIDC.
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Use the immutable Git commit SHA as the image version so every
+      # published artifact can be traced back to its source revision.
+      - name: Set image metadata
+        id: metadata
+        shell: bash
+        run: |
+          echo "backend_image=${{ steps.login-ecr.outputs.registry }}/${BACKEND_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${{ steps.login-ecr.outputs.registry }}/${FRONTEND_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      # Build the backend production image for the EKS linux/amd64 runtime.
+      - name: Build backend image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/backend/Dockerfile \
+            --tag "${{ steps.metadata.outputs.backend_image }}" \
+            .
+
+      # Build the frontend production image for the EKS linux/amd64 runtime.
+      - name: Build frontend image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/frontend/Dockerfile \
+            --tag "${{ steps.metadata.outputs.frontend_image }}" \
+            .
+
+      # Publish immutable backend and frontend images to Amazon ECR.
+      - name: Push images to Amazon ECR
+        run: |
+          docker push "${{ steps.metadata.outputs.backend_image }}"
+          docker push "${{ steps.metadata.outputs.frontend_image }}"
+
+      # Resolve the registry-assigned digests so subsequent signing and
+      # deployment stages can operate on immutable image identities.
+      - name: Resolve published image digests
+        id: digests
+        shell: bash
+        run: |
+          BACKEND_DIGEST=$(aws ecr describe-images \
+            --repository-name "${BACKEND_REPOSITORY}" \
+            --image-ids imageTag="${GITHUB_SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+
+          FRONTEND_DIGEST=$(aws ecr describe-images \
+            --repository-name "${FRONTEND_REPOSITORY}" \
+            --image-ids imageTag="${GITHUB_SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+
+          echo "backend_digest=${BACKEND_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "frontend_digest=${FRONTEND_DIGEST}" >> "$GITHUB_OUTPUT"
+
+          echo "Backend digest: ${BACKEND_DIGEST}"
+          echo "Frontend digest: ${FRONTEND_DIGEST}"
