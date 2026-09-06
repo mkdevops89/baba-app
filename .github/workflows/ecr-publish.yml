@@ -47,6 +47,10 @@ jobs:
         id: login-ecr
         uses: aws-actions/amazon-ecr-login@v2
 
+      # Install Cosign for keyless image signing and signature verification.
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.0
+
       # Use the immutable Git commit SHA as the image version so every
       # published artifact can be traced back to its source revision.
       - name: Set image metadata
@@ -105,3 +109,37 @@ jobs:
 
           echo "Backend digest: ${BACKEND_DIGEST}"
           echo "Frontend digest: ${FRONTEND_DIGEST}"
+
+      # Sign the immutable ECR image digests using GitHub Actions OIDC.
+      # Keyless signing avoids storing private signing keys in GitHub.
+      - name: Sign published images
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}
+        run: |
+          cosign sign --yes \
+            "${REGISTRY}/${BACKEND_REPOSITORY}@${BACKEND_DIGEST}"
+
+          cosign sign --yes \
+            "${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}"
+
+      # Verify that both signatures were issued to this exact GitHub workflow
+      # running from the protected main branch.
+      - name: Verify image signatures
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}
+          CERTIFICATE_IDENTITY: https://github.com/mkdevops89/baba-app/.github/workflows/ecr-publish.yml@refs/heads/main
+          CERTIFICATE_OIDC_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          cosign verify \
+            "${REGISTRY}/${BACKEND_REPOSITORY}@${BACKEND_DIGEST}" \
+            --certificate-identity="${CERTIFICATE_IDENTITY}" \
+            --certificate-oidc-issuer="${CERTIFICATE_OIDC_ISSUER}"
+
+          cosign verify \
+            "${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}" \
+            --certificate-identity="${CERTIFICATE_IDENTITY}" \
+            --certificate-oidc-issuer="${CERTIFICATE_OIDC_ISSUER}"

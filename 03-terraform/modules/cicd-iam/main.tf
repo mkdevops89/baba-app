@@ -87,6 +87,7 @@ data "aws_iam_policy_document" "ecr_publish" {
 
     actions = [
       "ecr:BatchCheckLayerAvailability",
+      "ecr:BatchGetImage",
       "ecr:CompleteLayerUpload",
       "ecr:DescribeImages",
       "ecr:GetDownloadUrlForLayer",
