@@ -13,18 +13,46 @@ function Storefront() {
   const params = useSearchParams();
   const search = params.get("search")?.trim() || "";
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false);
   const [error, setError] = useState(false);
 
   useEffect(() => {
-    setLoading(true); setError(false);
-    const url = search ? `${API_URL}/products/search?q=${encodeURIComponent(search)}` : `${API_URL}/products`;
-    fetch(url)
-      .then((response) => { if (!response.ok) throw new Error(String(response.status)); return response.json(); })
-      .then((data) => setProducts(Array.isArray(data) ? data : []))
-      .catch((err) => { console.error(err); setError(true); })
-      .finally(() => setLoading(false));
-  }, [search]);
+    const controller = new AbortController();
+
+    const loadProducts = async () => {
+      const url = search
+        ? `${API_URL}/products/search?q=${encodeURIComponent(search)}`
+        : `${API_URL}/products`;
+
+      try {
+        const response = await fetch(url, {
+          signal: controller.signal,
+        });
+
+        if (!response.ok) {
+          throw new Error(String(response.status));
+        }
+
+        const data = await response.json();
+
+        setProducts(Array.isArray(data) ? data : []);
+        setError(false);
+      } catch (err) {
+        if (err instanceof DOMException && err.name === "AbortError") {
+          return;
+        }
+
+        console.error(err);
+        setError(true);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+  loadProducts();
+
+  return () => controller.abort();
+}, [search]);
 
   const heading = useMemo(() => search ? `Results for “${search}”` : "Featured products", [search]);
 

@@ -14,6 +14,23 @@ resource "aws_vpc" "this" {
   }
 }
 
+# -----------------------------------------------------------------------------
+# Default VPC security group hardening
+# -----------------------------------------------------------------------------
+# Explicitly manages the VPC default security group with no ingress or egress
+# rules. Baba App workloads must use purpose-built security controls instead of
+# inheriting permissive default VPC behavior.
+resource "aws_default_security_group" "default" {
+  vpc_id = aws_vpc.this.id
+
+  ingress = []
+  egress  = []
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-default-sg-restricted"
+  }
+}
+
 
 # Retrieve the current AWS account ID.
 # Used when constructing resource-specific KMS policies without hard-coding

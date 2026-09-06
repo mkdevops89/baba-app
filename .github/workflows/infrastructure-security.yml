@@ -1,0 +1,107 @@
+name: Infrastructure Security
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "03-terraform/**"
+      - "04-eks/**"
+      - ".github/workflows/infrastructure-security.yml"
+
+  push:
+    branches:
+      - "feature/**"
+      - "security/**"
+    paths:
+      - "03-terraform/**"
+      - "04-eks/**"
+      - ".github/workflows/infrastructure-security.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: infrastructure-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  terraform-checkov:
+    name: Terraform - Checkov
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for infrastructure security validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Terraform configuration for security and compliance misconfigurations.
+      # Reviewed exceptions are scoped to known development-environment architecture
+      # decisions or scanner-policy limitations. All other findings remain blocking.
+      - name: Run Checkov against Terraform
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: 03-terraform/environments/dev
+          framework: terraform
+          var_file: 03-terraform/environments/dev/terraform.tfvars.example
+          skip_check: CKV_AWS_39,CKV_AWS_58,CKV_AWS_339,CKV_AWS_109,CKV_AWS_111,CKV_AWS_356
+          quiet: true
+          soft_fail: false
+
+  terraform-trivy:
+    name: Terraform - Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for infrastructure security validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Terraform files and fail when HIGH or CRITICAL misconfigurations are detected.
+      - name: Run Trivy against Terraform
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: 03-terraform/environments/dev
+          trivy-config: 05-cicd/trivy-ci.yaml
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+
+  kubernetes-checkov:
+    name: Kubernetes - Checkov
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for Kubernetes manifest validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Validate Kubernetes manifests against Checkov security policies.
+      - name: Run Checkov against Kubernetes manifests
+        uses: bridgecrewio/checkov-action@v12
+        with:
+          directory: 04-eks
+          framework: kubernetes
+          skip_check: CKV2_K8S_6
+          quiet: true
+          soft_fail: false
+
+  kubernetes-trivy:
+    name: Kubernetes - Trivy
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve repository content for Kubernetes manifest validation.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Kubernetes manifests and fail when HIGH or CRITICAL misconfigurations are detected.
+      - name: Run Trivy against Kubernetes manifests
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: config
+          scan-ref: 04-eks
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false

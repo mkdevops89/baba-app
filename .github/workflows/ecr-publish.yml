@@ -1,0 +1,229 @@
+name: ECR Publish
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "01-application/**"
+      - "02-containerization/**"
+      - ".github/workflows/ecr-publish.yml"
+
+permissions:
+  contents: read
+  id-token: write
+  attestations: write
+  packages: write
+
+concurrency:
+  group: ecr-publish-${{ github.ref }}
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+  BACKEND_REPOSITORY: baba-app-dev-backend
+  FRONTEND_REPOSITORY: baba-app-dev-frontend
+
+jobs:
+  publish:
+    name: Build and Publish to ECR
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve the exact source revision that will be represented by the
+      # published container images.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Exchange GitHub's short-lived OIDC identity for temporary AWS
+      # credentials. No long-lived AWS access keys are stored in GitHub.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: arn:aws:iam::406312601212:role/baba-app-dev-github-actions-cicd
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Authenticate Docker to the Amazon ECR registry using temporary AWS
+      # credentials obtained through OIDC.
+      - name: Login to Amazon ECR
+        id: login-ecr
+        uses: aws-actions/amazon-ecr-login@v2
+
+      # Install Cosign for keyless image signing and signature verification.
+      - name: Install Cosign
+        uses: sigstore/cosign-installer@v4.1.0
+
+      # Use the immutable Git commit SHA as the image version so every
+      # published artifact can be traced back to its source revision.
+      - name: Set image metadata
+        id: metadata
+        shell: bash
+        run: |
+          echo "backend_image=${{ steps.login-ecr.outputs.registry }}/${BACKEND_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+          echo "frontend_image=${{ steps.login-ecr.outputs.registry }}/${FRONTEND_REPOSITORY}:${GITHUB_SHA}" >> "$GITHUB_OUTPUT"
+
+      # Build the backend production image for the EKS linux/amd64 runtime.
+      - name: Build backend image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/backend/Dockerfile \
+            --tag "${{ steps.metadata.outputs.backend_image }}" \
+            .
+
+      # Build the frontend production image for the EKS linux/amd64 runtime.
+      - name: Build frontend image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/frontend/Dockerfile \
+            --tag "${{ steps.metadata.outputs.frontend_image }}" \
+            .
+
+      # Scan the exact backend image that will be published to ECR.
+      # This prevents a separately rebuilt or unscanned artifact from entering
+      # the registry.
+      - name: Scan backend image before publication
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.backend_image }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          trivyignores: 05-cicd/trivy-container-ignore.yaml
+
+      # Scan the exact frontend image that will be published to ECR.
+      - name: Scan frontend image before publication
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.frontend_image }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+
+      # Generate a CycloneDX SBOM from the exact backend image approved for
+      # publication so the component inventory matches the shipped artifact.
+      - name: Generate backend publication SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.metadata.outputs.backend_image }}
+          format: cyclonedx-json
+          output-file: baba-app-backend-${{ github.sha }}.cdx.json
+          artifact-name: baba-app-backend-publication-sbom
+          upload-artifact: true
+
+      # Generate the frontend SBOM from the same image that will be published.
+      - name: Generate frontend publication SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.metadata.outputs.frontend_image }}
+          format: cyclonedx-json
+          output-file: baba-app-frontend-${{ github.sha }}.cdx.json
+          artifact-name: baba-app-frontend-publication-sbom
+          upload-artifact: true
+
+      # Publish immutable backend and frontend images to Amazon ECR.
+      - name: Push images to Amazon ECR
+        run: |
+          docker push "${{ steps.metadata.outputs.backend_image }}"
+          docker push "${{ steps.metadata.outputs.frontend_image }}"
+
+      # Resolve the registry-assigned digests so subsequent signing and
+      # deployment stages can operate on immutable image identities.
+      - name: Resolve published image digests
+        id: digests
+        shell: bash
+        run: |
+          BACKEND_DIGEST=$(aws ecr describe-images \
+            --repository-name "${BACKEND_REPOSITORY}" \
+            --image-ids imageTag="${GITHUB_SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+
+          FRONTEND_DIGEST=$(aws ecr describe-images \
+            --repository-name "${FRONTEND_REPOSITORY}" \
+            --image-ids imageTag="${GITHUB_SHA}" \
+            --query 'imageDetails[0].imageDigest' \
+            --output text)
+
+          echo "backend_digest=${BACKEND_DIGEST}" >> "$GITHUB_OUTPUT"
+          echo "frontend_digest=${FRONTEND_DIGEST}" >> "$GITHUB_OUTPUT"
+
+          echo "Backend digest: ${BACKEND_DIGEST}"
+          echo "Frontend digest: ${FRONTEND_DIGEST}"
+
+      # Generate signed build provenance for the immutable backend image.
+      # The attestation records the repository, workflow, commit, and build
+      # identity associated with the published container artifact.
+      - name: Attest backend build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPOSITORY }}
+          subject-digest: ${{ steps.digests.outputs.backend_digest }}
+          push-to-registry: true
+
+      # Generate equivalent provenance for the frontend image so both deployable
+      # artifacts can be traced back to the GitHub Actions build that produced them.
+      - name: Attest frontend build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPOSITORY }}
+          subject-digest: ${{ steps.digests.outputs.frontend_digest }}
+          push-to-registry: true
+
+      # Sign the immutable ECR image digests using GitHub Actions OIDC.
+      # Keyless signing avoids storing private signing keys in GitHub.
+      - name: Sign published images
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}
+        run: |
+          cosign sign --yes \
+            "${REGISTRY}/${BACKEND_REPOSITORY}@${BACKEND_DIGEST}"
+
+          cosign sign --yes \
+            "${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}"
+
+      # Verify that both signatures were issued to this exact GitHub workflow
+      # running from the protected main branch.
+      - name: Verify image signatures
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}
+          CERTIFICATE_IDENTITY: https://github.com/mkdevops89/baba-app/.github/workflows/ecr-publish.yml@refs/heads/main
+          CERTIFICATE_OIDC_ISSUER: https://token.actions.githubusercontent.com
+        run: |
+          cosign verify \
+            "${REGISTRY}/${BACKEND_REPOSITORY}@${BACKEND_DIGEST}" \
+            --certificate-identity="${CERTIFICATE_IDENTITY}" \
+            --certificate-oidc-issuer="${CERTIFICATE_OIDC_ISSUER}"
+
+          cosign verify \
+            "${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}" \
+            --certificate-identity="${CERTIFICATE_IDENTITY}" \
+            --certificate-oidc-issuer="${CERTIFICATE_OIDC_ISSUER}"
+
+      # Verify the GitHub build provenance associated with each immutable image.
+      # This confirms the images were produced by the expected repository/workflow.
+      - name: Verify build provenance attestations
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}
+        run: |
+          gh attestation verify \
+            "oci://${REGISTRY}/${BACKEND_REPOSITORY}@${BACKEND_DIGEST}" \
+            --repo mkdevops89/baba-app
+
+          gh attestation verify \
+            "oci://${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}" \
+            --repo mkdevops89/baba-app

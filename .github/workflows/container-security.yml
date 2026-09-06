@@ -1,0 +1,89 @@
+name: Container Security
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "01-application/**"
+      - "02-containerization/**"
+      - ".github/workflows/container-security.yml"
+
+  push:
+    branches:
+      - "feature/**"
+      - "security/**"
+    paths:
+      - "01-application/**"
+      - "02-containerization/**"
+      - ".github/workflows/container-security.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: container-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-image:
+    name: Backend - Container Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve the application source and Dockerfile used to build the image.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Build the same production-oriented backend image that will later be
+      # published to Amazon ECR. GitHub-hosted runners use linux/amd64.
+      - name: Build backend container image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/backend/Dockerfile \
+            --tag baba-app-backend:ci \
+            .
+
+      # Scan the final runtime image for known HIGH and CRITICAL CVEs.
+      # Findings at the configured severity threshold block the pipeline.
+      - name: Scan backend container image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: baba-app-backend:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          trivyignores: 05-cicd/trivy-container-ignore.yaml
+
+  frontend-image:
+    name: Frontend - Container Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve the application source and Dockerfile used to build the image.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Build the production Next.js image for the deployment architecture.
+      - name: Build frontend container image
+        run: |
+          docker build \
+            --platform linux/amd64 \
+            --file 02-containerization/frontend/Dockerfile \
+            --tag baba-app-frontend:ci \
+            .
+
+      # Scan the final frontend runtime image for known HIGH and CRITICAL CVEs.
+      - name: Scan frontend container image
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: baba-app-frontend:ci
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
