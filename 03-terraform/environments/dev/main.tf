@@ -48,10 +48,12 @@ module "eks" {
 module "cicd_iam" {
   source = "../../modules/cicd-iam"
 
-  project_name      = var.project_name
-  environment       = var.environment
-  github_owner      = "mkdevops89"
-  github_repository = "baba-app"
+  project_name         = var.project_name
+  environment          = var.environment
+  github_owner         = "mkdevops89"
+  github_owner_id      = "251259091"
+  github_repository    = "baba-app"
+  github_repository_id = "1355057456"
 
   ecr_repository_arns = [
     module.ecr.backend_repository_arn,

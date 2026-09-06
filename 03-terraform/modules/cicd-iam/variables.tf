@@ -34,3 +34,13 @@ variable "ecr_repository_arns" {
   description = "ECR repository ARNs the CI/CD role is permitted to publish images to."
   type        = list(string)
 }
+
+variable "github_owner_id" {
+  description = "Immutable GitHub account ID used in the repository OIDC subject claim."
+  type        = string
+}
+
+variable "github_repository_id" {
+  description = "Immutable GitHub repository ID used in the OIDC subject claim."
+  type        = string
+}
