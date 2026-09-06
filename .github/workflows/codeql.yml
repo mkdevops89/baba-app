@@ -1,0 +1,60 @@
+name: CodeQL Security Analysis
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "01-application/**"
+      - ".github/workflows/codeql.yml"
+
+  push:
+    branches:
+      - "feature/**"
+      - "security/**"
+    paths:
+      - "01-application/**"
+      - ".github/workflows/codeql.yml"
+
+permissions:
+  contents: read
+  security-events: write
+
+concurrency:
+  group: codeql-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  analyze:
+    name: CodeQL - ${{ matrix.language }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        language:
+          - java-kotlin
+          - javascript-typescript
+
+    steps:
+      # Retrieve the application source code for static security analysis.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Initialize CodeQL for the language selected by the matrix.
+      - name: Initialize CodeQL
+        uses: github/codeql-action/init@v3
+        with:
+          languages: ${{ matrix.language }}
+
+      # Build compiled languages so CodeQL can observe application behavior.
+      # Java requires an explicit build while JavaScript/TypeScript can be
+      # analyzed without a custom build command.
+      - name: Build backend for CodeQL
+        if: matrix.language == 'java-kotlin'
+        working-directory: 01-application/backend
+        run: mvn clean package -DskipTests
+
+      # Perform static analysis and publish findings to GitHub code scanning.
+      - name: Perform CodeQL analysis
+        uses: github/codeql-action/analyze@v3
