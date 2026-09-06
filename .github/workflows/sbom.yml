@@ -1,0 +1,86 @@
+name: SBOM Generation
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "01-application/**"
+      - "02-containerization/**"
+      - ".github/workflows/sbom.yml"
+
+  push:
+    branches:
+      - "feature/**"
+      - "security/**"
+    paths:
+      - "01-application/**"
+      - "02-containerization/**"
+      - ".github/workflows/sbom.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: sbom-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-sbom:
+    name: Backend - SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve application source and container definitions.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Build the backend runtime image that will later be published to ECR.
+      - name: Build backend container image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/backend/Dockerfile \
+            --tag baba-app-backend:sbom \
+            .
+
+      # Generate a CycloneDX software bill of materials from the final image.
+      # The SBOM provides an auditable inventory of runtime packages and libraries.
+      - name: Generate backend SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: baba-app-backend:sbom
+          format: cyclonedx-json
+          output-file: baba-app-backend.cdx.json
+          artifact-name: baba-app-backend-sbom
+          upload-artifact: true
+
+  frontend-sbom:
+    name: Frontend - SBOM
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve application source and container definitions.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Build the frontend runtime image using the same deployment architecture.
+      - name: Build frontend container image
+        run: |
+          docker build \
+            --pull \
+            --platform linux/amd64 \
+            --file 02-containerization/frontend/Dockerfile \
+            --tag baba-app-frontend:sbom \
+            .
+
+      # Generate a CycloneDX software bill of materials from the final image.
+      - name: Generate frontend SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: baba-app-frontend:sbom
+          format: cyclonedx-json
+          output-file: baba-app-frontend.cdx.json
+          artifact-name: baba-app-frontend-sbom
+          upload-artifact: true
