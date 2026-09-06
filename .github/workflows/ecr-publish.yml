@@ -12,6 +12,8 @@ on:
 permissions:
   contents: read
   id-token: write
+  attestations: write
+  packages: write
 
 concurrency:
   group: ecr-publish-${{ github.ref }}
@@ -110,6 +112,25 @@ jobs:
           echo "Backend digest: ${BACKEND_DIGEST}"
           echo "Frontend digest: ${FRONTEND_DIGEST}"
 
+      # Generate signed build provenance for the immutable backend image.
+      # The attestation records the repository, workflow, commit, and build
+      # identity associated with the published container artifact.
+      - name: Attest backend build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.login-ecr.outputs.registry }}/${{ env.BACKEND_REPOSITORY }}
+          subject-digest: ${{ steps.digests.outputs.backend_digest }}
+          push-to-registry: true
+
+      # Generate equivalent provenance for the frontend image so both deployable
+      # artifacts can be traced back to the GitHub Actions build that produced them.
+      - name: Attest frontend build provenance
+        uses: actions/attest@v4
+        with:
+          subject-name: ${{ steps.login-ecr.outputs.registry }}/${{ env.FRONTEND_REPOSITORY }}
+          subject-digest: ${{ steps.digests.outputs.frontend_digest }}
+          push-to-registry: true
+
       # Sign the immutable ECR image digests using GitHub Actions OIDC.
       # Keyless signing avoids storing private signing keys in GitHub.
       - name: Sign published images
@@ -143,3 +164,19 @@ jobs:
             "${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}" \
             --certificate-identity="${CERTIFICATE_IDENTITY}" \
             --certificate-oidc-issuer="${CERTIFICATE_OIDC_ISSUER}"
+
+      # Verify the GitHub build provenance associated with each immutable image.
+      # This confirms the images were produced by the expected repository/workflow.
+      - name: Verify build provenance attestations
+        env:
+          REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+          BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
+          FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}
+        run: |
+          gh attestation verify \
+            "oci://${REGISTRY}/${BACKEND_REPOSITORY}@${BACKEND_DIGEST}" \
+            --repo mkdevops89/baba-app
+
+          gh attestation verify \
+            "oci://${REGISTRY}/${FRONTEND_REPOSITORY}@${FRONTEND_DIGEST}" \
+            --repo mkdevops89/baba-app
