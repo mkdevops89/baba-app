@@ -1092,3 +1092,73 @@ Provenance verification             PENDING POST-MERGE
 This distinction is intentional.
 
 Phase 05 implementation is ready for merge, but the privileged main-only artifact publication chain must still be validated after merge before the phase is considered fully validated end to end.
+
+## Post-Merge Publication Validation
+
+The main-only ECR publication workflow was successfully validated after Phase 05 was merged.
+
+Workflow:
+
+```text
+ECR Publish
+```
+
+Run ID:
+
+```text
+34058566383
+```
+
+Final result:
+
+```text
+SUCCESS
+```
+
+Validated end-to-end stages:
+
+```text
+GitHub OIDC authentication        PASS
+AWS temporary credentials         PASS
+Amazon ECR authentication         PASS
+Backend image build               PASS
+Frontend image build              PASS
+Exact backend image scan          PASS
+Exact frontend image scan         PASS
+Backend publication SBOM          PASS
+Frontend publication SBOM         PASS
+Amazon ECR image publication      PASS
+Backend digest resolution         PASS
+Frontend digest resolution        PASS
+Backend provenance attestation    PASS
+Frontend provenance attestation   PASS
+Cosign image signing              PASS
+Signature verification            PASS
+Provenance verification           PASS
+```
+
+The initial publication attempt failed during AWS role assumption with:
+
+```text
+Not authorized to perform sts:AssumeRoleWithWebIdentity
+```
+
+The root cause was an OIDC subject mismatch.
+
+AWS initially trusted the legacy repository subject:
+
+```text
+repo:mkdevops89/baba-app:ref:refs/heads/main
+```
+
+GitHub emitted the immutable repository subject:
+
+```text
+repo:mkdevops89@251259091/baba-app@1355057456:ref:refs/heads/main
+```
+
+The Terraform trust policy was updated to use the immutable GitHub owner and repository IDs.
+
+After the trust policy update, the same publication workflow completed successfully end to end.
+
+This completed Phase 05 publication validation.
