@@ -1,0 +1,69 @@
+name: Dependency Security
+
+on:
+  pull_request:
+    branches:
+      - main
+    paths:
+      - "01-application/backend/**"
+      - "01-application/frontend/**"
+      - ".github/workflows/dependency-security.yml"
+
+  push:
+    branches:
+      - "feature/**"
+      - "security/**"
+    paths:
+      - "01-application/backend/**"
+      - "01-application/frontend/**"
+      - ".github/workflows/dependency-security.yml"
+
+permissions:
+  contents: read
+
+concurrency:
+  group: dependency-security-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  backend-sca:
+    name: Backend - Dependency Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve backend dependency manifests for vulnerability analysis.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan Maven dependencies for known HIGH and CRITICAL vulnerabilities.
+      # The pipeline fails when an unacceptable dependency vulnerability is found.
+      - name: Scan backend dependencies
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: 01-application/backend
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+
+  frontend-sca:
+    name: Frontend - Dependency Scan
+    runs-on: ubuntu-latest
+
+    steps:
+      # Retrieve frontend dependency manifests and lockfiles for analysis.
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Scan npm dependencies for known HIGH and CRITICAL vulnerabilities.
+      # Lockfile analysis provides deterministic dependency visibility.
+      - name: Scan frontend dependencies
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: 01-application/frontend
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
