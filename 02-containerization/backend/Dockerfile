@@ -17,7 +17,7 @@ RUN mvn clean package
 # =========================
 # Production runtime
 # =========================
-FROM gcr.io/distroless/java17-debian12:nonroot
+FROM gcr.io/distroless/java17-debian13:nonroot
 
 WORKDIR /app
 

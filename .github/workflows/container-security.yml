@@ -40,6 +40,7 @@ jobs:
       - name: Build backend container image
         run: |
           docker build \
+            --pull \
             --platform linux/amd64 \
             --file 02-containerization/backend/Dockerfile \
             --tag baba-app-backend:ci \
