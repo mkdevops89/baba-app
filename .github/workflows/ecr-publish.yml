@@ -82,6 +82,52 @@ jobs:
             --tag "${{ steps.metadata.outputs.frontend_image }}" \
             .
 
+      # Scan the exact backend image that will be published to ECR.
+      # This prevents a separately rebuilt or unscanned artifact from entering
+      # the registry.
+      - name: Scan backend image before publication
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.backend_image }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+          trivyignores: 05-cicd/trivy-container-ignore.yaml
+
+      # Scan the exact frontend image that will be published to ECR.
+      - name: Scan frontend image before publication
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.metadata.outputs.frontend_image }}
+          scanners: vuln
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          ignore-unfixed: false
+
+      # Generate a CycloneDX SBOM from the exact backend image approved for
+      # publication so the component inventory matches the shipped artifact.
+      - name: Generate backend publication SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.metadata.outputs.backend_image }}
+          format: cyclonedx-json
+          output-file: baba-app-backend-${{ github.sha }}.cdx.json
+          artifact-name: baba-app-backend-publication-sbom
+          upload-artifact: true
+
+      # Generate the frontend SBOM from the same image that will be published.
+      - name: Generate frontend publication SBOM
+        uses: anchore/sbom-action@v0
+        with:
+          image: ${{ steps.metadata.outputs.frontend_image }}
+          format: cyclonedx-json
+          output-file: baba-app-frontend-${{ github.sha }}.cdx.json
+          artifact-name: baba-app-frontend-publication-sbom
+          upload-artifact: true
+
       # Publish immutable backend and frontend images to Amazon ECR.
       - name: Push images to Amazon ECR
         run: |
@@ -169,6 +215,7 @@ jobs:
       # This confirms the images were produced by the expected repository/workflow.
       - name: Verify build provenance attestations
         env:
+          GH_TOKEN: ${{ github.token }}
           REGISTRY: ${{ steps.login-ecr.outputs.registry }}
           BACKEND_DIGEST: ${{ steps.digests.outputs.backend_digest }}
           FRONTEND_DIGEST: ${{ steps.digests.outputs.frontend_digest }}

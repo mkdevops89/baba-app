@@ -744,26 +744,52 @@ This exercise provides evidence that the pipeline is enforcing security rather t
 
 ## Supply-Chain Security Controls
 
-Phase 05 introduces the initial supply-chain security foundation.
+Phase 05 establishes the initial Baba App software supply-chain security foundation.
 
-Controls include:
+Implemented controls include:
 
 - Immutable container tags
 - Image digest tracking
 - SBOM generation
-- Artifact signing
-- Build traceability
-- Controlled publication
-- Security gates
-
-Later phases will extend these controls with:
-
+- Exact-image vulnerability scanning before publication
+- Keyless artifact signing with Cosign
 - Signature verification
-- Provenance validation
-- Policy-based admission
-- Software supply-chain attestation
-- Advanced artifact promotion controls
+- Build provenance attestations
+- Provenance verification
+- Build traceability
+- Controlled Amazon ECR publication
+- Security gates
+- GitHub OIDC authentication to AWS
 
+The privileged publication workflow follows:
+
+```text
+Build exact image
+      |
+      v
+Scan exact image
+      |
+      v
+Generate SBOM
+      |
+      v
+Push same image
+      |
+      v
+Resolve immutable digest
+      |
+      v
+Generate provenance
+      |
+      v
+Sign digest
+      |
+      v
+Verify signature
+      |
+      v
+Verify provenance
+```
 ---
 
 ## GitHub Actions AWS Authentication
@@ -856,11 +882,11 @@ Workflows should not rely on unnecessarily broad default GitHub token permission
 
 ## Amazon ECR Integration
 
-The pipeline will publish container images to the Phase 03 ECR repositories.
+The pipeline publishes approved container images to the Phase 03 Amazon ECR repositories.
 
-Authentication should use temporary credentials obtained through GitHub OIDC.
+Authentication uses temporary AWS credentials obtained through GitHub OIDC.
 
-A typical workflow is:
+The final publication workflow is:
 
 ```text
 GitHub Actions
@@ -872,22 +898,31 @@ Assume AWS CI/CD role through OIDC
 Authenticate to Amazon ECR
       |
       v
-Build image
+Build exact container images
       |
       v
-Scan image
+Scan exact images with Trivy
       |
       v
-Generate SBOM
+Generate CycloneDX SBOMs
       |
       v
-Sign approved image
+Push the same images to ECR
       |
       v
-Push image
+Resolve SHA256 image digests
       |
       v
-Record SHA256 digest
+Generate build provenance
+      |
+      v
+Sign immutable digests with Cosign
+      |
+      v
+Verify signatures
+      |
+      v
+Verify provenance
 ```
 
 ---
@@ -1006,17 +1041,32 @@ This keeps build concerns separate from deployment reconciliation.
 
 ## Approval Gates
 
-Approval controls should be introduced for sensitive promotion actions.
+Explicit environment or production-promotion approval gates are not implemented in Phase 05.
 
-Potential examples include:
+Phase 05 focuses on:
+
+- pull-request validation
+- required CI and security checks
+- protected `main` branch workflow
+- secure artifact publication
+- immutable artifact identity
+- GitOps handoff
+
+The repository already uses pull-request-based change control and successful CI/security checks before merge.
+
+Additional promotion controls will be introduced when higher-environment and GitOps deployment workflows require them.
+
+Future controls may include:
 
 - GitHub Environments
-- Required reviewers
-- Protected branches
-- Pull-request approval
+- Required deployment reviewers
+- Environment protection rules
 - Manual production promotion
+- Policy-based artifact approval
 
-Development automation may remain faster, while higher-risk environments should require stronger approval controls.
+Development automation can remain relatively fast, while higher-risk environments should require stronger approval controls.
+
+These controls are intentionally deferred rather than represented as completed Phase 05 functionality.
 
 ---
 
@@ -1428,27 +1478,38 @@ CI/CD logs and artifact metadata will support investigation and response exercis
 
 ## Phase 05 Target Outcome
 
-At the end of Phase 05, Baba App should have a CI/CD foundation capable of demonstrating:
+At the end of Phase 05, Baba App should have a CI/CD and software supply-chain foundation capable of demonstrating:
 
 ```text
-Automated build
-Automated test
+Automated backend build validation
+Automated frontend build validation
+CI test-stage execution
 Security scanning
 Enforceable security gates
 Secrets protection
-IaC scanning
-Kubernetes scanning
+Static Application Security Testing
+Software Composition Analysis
+Terraform security scanning
+Kubernetes manifest scanning
 Container vulnerability scanning
 SBOM generation
-Artifact signing
+Exact-image publication controls
 AWS OIDC authentication
-Amazon ECR publishing
-Immutable artifact identity
-Artifact traceability
-Approval controls
-GitOps-ready delivery
+Least-privilege Amazon ECR access
+Immutable image publication
+Image digest traceability
+Keyless artifact signing
+Signature verification
+Build provenance
+Provenance verification
+Risk-based security exception handling
+CI and deployment separation
+GitOps-ready artifact delivery
 ```
+Meaningful backend and frontend automated test coverage remains technical debt and should not be represented as complete application test coverage.
 
-The completed phase should demonstrate that CI/CD is not merely a deployment mechanism.
+Explicit environment or production-promotion approval gates are deferred until later deployment and GitOps workflows require them.
+
+The completed phase should demonstrate that CI/CD is not merely a mechanism for building and publishing software.
 
 It is also a security enforcement point within the software-development lifecycle.
