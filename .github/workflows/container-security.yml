@@ -57,6 +57,7 @@ jobs:
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: false
+          trivyignores: 05-cicd/trivy-container-ignore.yaml
 
   frontend-image:
     name: Frontend - Container Scan

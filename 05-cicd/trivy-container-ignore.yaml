@@ -1,0 +1,36 @@
+vulnerabilities:
+  - id: CVE-2026-76642
+    purls:
+      - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
+    expired_at: 2026-10-06
+    statement: >-
+      Debian 13 distroless runtime dependency. No fixed package version is
+      currently available. Backend application JAR is not affected. Reassess
+      when Debian or Distroless publishes an updated util-linux/libuuid1 package.
+
+  - id: CVE-2026-78408
+    purls:
+      - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
+    expired_at: 2026-10-06
+    statement: >-
+      Debian 13 distroless runtime dependency. No fixed package version is
+      currently available. Reassess when Debian or Distroless publishes an
+      updated util-linux/libuuid1 package.
+
+  - id: CVE-2026-78409
+    purls:
+      - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
+    expired_at: 2026-10-06
+    statement: >-
+      Debian 13 distroless runtime dependency. No fixed package version is
+      currently available. Reassess when Debian or Distroless publishes an
+      updated util-linux/libuuid1 package.
+
+  - id: CVE-2026-78410
+    purls:
+      - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
+    expired_at: 2026-10-06
+    statement: >-
+      Debian 13 distroless runtime dependency. No fixed package version is
+      currently available. Reassess when Debian or Distroless publishes an
+      updated util-linux/libuuid1 package.
