@@ -8,17 +8,18 @@ This document records the security controls introduced in the Baba App GitOps fo
 
 | Control | Status |
 |---|---|
-| Separation of CI and CD | Implemented in design; live validation pending |
-| Git as source of truth | Implemented in design; live validation pending |
-| Restricted Argo CD source repository | Implemented |
-| Restricted destination cluster/namespace | Implemented |
-| Restricted Kubernetes resource types | Implemented |
-| Immutable ECR image digests | Implemented |
-| No `latest` tag | Implemented |
-| Argo CD drift detection | Configured; live validation pending |
-| Self-healing | Configured; live validation pending |
-| Pruning | Configured; live validation pending |
-| Namespace declared in Git | Implemented |
+| Separation of CI and CD | Implemented and validated |
+| Git as source of truth | Implemented and validated |
+| Restricted Argo CD source repository | Implemented and validated |
+| Restricted destination cluster/namespace | Implemented and validated |
+| Restricted Kubernetes resource types | Implemented and validated |
+| AppProject authorization enforcement | Implemented and validated |
+| Immutable ECR image digests | Implemented and validated |
+| No `latest` tag | Implemented and validated |
+| Argo CD drift detection | Implemented and validated |
+| Self-healing | Implemented and validated |
+| Pruning | Implemented and validated |
+| Namespace declared in Git | Implemented and validated |
 | Service account token automount disabled | Implemented |
 | Non-root workloads | Implemented |
 | Privilege escalation disabled | Implemented |
@@ -27,9 +28,9 @@ This document records the security controls introduced in the Baba App GitOps fo
 | RuntimeDefault seccomp | Implemented |
 | Resource requests/limits | Implemented |
 | Liveness/readiness probes | Implemented |
-| ClusterIP services | Implemented |
-| Secrets kept out of Git | Design requirement |
-| PR-reviewed change path | Implemented in design |
+| ClusterIP services | Implemented and validated |
+| Secrets kept out of Git | Implemented |
+| PR-reviewed change path | Implemented |
 
 ## Separation of CI and CD
 
@@ -98,7 +99,7 @@ syncPolicy:
     selfHeal: true
 ```
 
-Live validation will confirm drift detection, restoration of Git-declared state, and removal of obsolete managed resources.
+Live validation confirmed drift detection, restoration of Git-declared state, and removal of obsolete managed resources.
 
 ## Kubernetes Workload Hardening
 
@@ -169,4 +170,96 @@ Drift detection
 Automated reconciliation
 +
 Hardened Kubernetes workloads
+```
+
+## Separation of CI and CD
+
+### Status
+
+```text
+IMPLEMENTED
+VALIDATED
+```
+
+---
+
+## Git as the Deployment Source of Truth
+
+### Status
+
+```text
+IMPLEMENTED
+VALIDATED
+```
+
+---
+
+## Automated Drift Detection
+
+### Status
+
+```text
+IMPLEMENTED
+VALIDATED
+```
+
+---
+
+## Self-Healing
+
+### Control
+
+```yaml
+selfHeal: true
+```
+
+### Status
+
+```text
+IMPLEMENTED
+VALIDATED
+```
+
+---
+
+## Pruning
+
+### Control
+
+```yaml
+prune: true
+```
+
+### Status
+
+```text
+IMPLEMENTED
+VALIDATED
+```
+
+---
+
+## AppProject Resource Authorization Enforcement
+
+### Control
+
+The Baba App AppProject restricts namespace-scoped resources to the types required by the application.
+
+A temporary ConfigMap was intentionally introduced through Git during validation.
+
+Argo CD rejected the resource with:
+
+```text
+resource :ConfigMap is not permitted in project baba-app
+```
+
+### Security Benefit
+
+This demonstrates that the AppProject resource whitelist is actively enforced and prevents unauthorized Kubernetes resource types from being deployed through the Baba App GitOps project.
+
+### Status
+
+```text
+IMPLEMENTED
+VALIDATED
 ```

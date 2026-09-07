@@ -17,16 +17,16 @@ This document records Phase 06 GitOps validation. Validation is divided into loc
 | Argo CD AppProject YAML syntax | PASS |
 | Argo CD Application YAML syntax | PASS |
 | Git whitespace validation | PASS |
-| Argo CD installation | PENDING LIVE VALIDATION |
-| AppProject creation | PENDING LIVE VALIDATION |
-| Application creation | PENDING LIVE VALIDATION |
-| Argo CD synchronization | PENDING LIVE VALIDATION |
-| Backend workload health | PENDING LIVE VALIDATION |
-| Frontend workload health | PENDING LIVE VALIDATION |
-| Runtime image digest verification | PENDING LIVE VALIDATION |
-| Drift detection | PENDING LIVE VALIDATION |
-| Self-healing | PENDING LIVE VALIDATION |
-| Pruning | PENDING LIVE VALIDATION |
+| Argo CD installation | PASS|
+| AppProject creation | PASS |
+| Application creation | PASS |
+| Argo CD synchronization | PASS |
+| Backend workload health | PASS |
+| Frontend workload health | PASS |
+| Runtime image digest verification | PASS |
+| Drift detection | PASS |
+| Self-healing | PASS |
+| Pruning | PASS |
 
 ## Local Validation
 
@@ -150,158 +150,271 @@ Status:
 PASS
 ```
 
-## Live Validation Plan
+---
 
-### Recreate EKS
+## Live GitOps Validation Results
 
-Expected:
+### EKS Recreation
 
-```text
-EKS control plane available
-worker nodes available
-kubectl connectivity restored
-```
-
-Status: `PENDING`
-
-### Install Argo CD
-
-Install into `argocd` and verify components are healthy.
-
-Status: `PENDING`
-
-### Apply AppProject
+The development EKS environment was recreated through Terraform for Phase 06 live validation.
 
 ```text
-06-gitops/argocd/projects/baba-app-project.yaml
+Plan: 8 to add, 0 to change, 0 to destroy.
 ```
 
-Expected:
+Cluster connectivity was restored with:
+
+```bash
+AWS_PROFILE=baba-admin aws eks update-kubeconfig \
+  --region us-east-1 \
+  --name baba-app-dev-eks
+```
+
+Both managed worker nodes reached `Ready`.
+
+Validation status:
 
 ```text
-AppProject/baba-app created
+PASS
 ```
 
-Status: `PENDING`
+---
 
-### Apply Application
+## Argo CD Installation Validation
+
+The initial client-side installation encountered:
 
 ```text
-06-gitops/argocd/applications/baba-app-dev.yaml
+The CustomResourceDefinition "applicationsets.argoproj.io" is invalid:
+metadata.annotations: Too long: may not be more than 262144 bytes
 ```
 
-Expected:
+The installation was remediated using server-side apply:
+
+```bash
+kubectl apply \
+  --server-side \
+  --force-conflicts \
+  -n argocd \
+  -f https://raw.githubusercontent.com/argoproj/argo-cd/stable/manifests/install.yaml
+```
+
+The following CRDs were verified:
 
 ```text
-Application/baba-app-dev created
+applications.argoproj.io
+applicationsets.argoproj.io
+appprojects.argoproj.io
 ```
 
-Status: `PENDING`
+All core Argo CD workloads reached `Running`.
 
-### Validate Sync and Health
+Validation status:
 
-Expected:
+```text
+PASS
+```
+
+---
+
+## Argo CD Application Synchronization
+
+The committed Application is designed to reconcile from:
+
+```text
+main
+```
+
+For pre-merge live validation, the runtime Application was temporarily patched to:
+
+```text
+feature/gitops-foundation
+```
+
+Argo CD reported:
 
 ```text
 Sync Status: Synced
 Health Status: Healthy
 ```
 
-Status: `PENDING`
+Validation status:
 
-### Validate Workloads
+```text
+PASS
+```
+
+---
+
+## Workload Health Validation
+
+The GitOps deployment created:
+
+```text
+2 backend Pods
+2 frontend Pods
+```
+
+All four Pods reached:
+
+```text
+Running
+Ready 1/1
+```
+
+Backend and frontend Services remained:
+
+```text
+ClusterIP
+```
+
+Validation status:
+
+```text
+PASS
+```
+
+---
+
+## Runtime Immutable Artifact Validation
+
+Backend:
+
+```text
+406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-backend@sha256:88f9c5203ea301c780029f7b9a62d3c0777d4d037ed7738093777b723d2a7a74
+```
+
+Frontend:
+
+```text
+406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-frontend@sha256:de401212938d47baddf5432aa54c6ce0ce0eb193f488706126003163a898f59b
+```
+
+These matched the exact immutable Phase 05 artifacts.
+
+Validation status:
+
+```text
+PASS
+```
+
+---
+
+## Drift Detection and Self-Healing Validation
+
+Git declared:
+
+```text
+replicas: 2
+```
+
+A manual out-of-band change was introduced:
 
 ```bash
-kubectl get pods -n baba-app
+kubectl scale deployment baba-app-backend \
+  --replicas=5 \
+  -n baba-app
 ```
 
-Expected backend and frontend replicas Ready.
-
-Status: `PENDING`
-
-### Validate Runtime Digests
-
-Confirm running Pods use the exact Phase 05 backend and frontend digests.
-
-Status: `PENDING`
-
-## Drift Detection Test
-
-Introduce deliberate drift:
-
-```bash
-kubectl scale deployment baba-app-backend   --replicas=5   -n baba-app
-```
-
-Git declares 2 replicas.
-
-Expected flow:
+Argo CD restored the Deployment to:
 
 ```text
-Actual state changes to 5
-        ↓
-Argo CD detects drift
-        ↓
-Application becomes OutOfSync
-        ↓
-Self-healing begins
-        ↓
-Deployment returns to 2 replicas
-        ↓
-Application returns to Synced
+desired=2
+available=2
 ```
 
-Status: `PENDING`
-
-## Pruning Test
-
-A temporary Git-managed Kubernetes resource will be introduced and then removed through the approved Git workflow.
-
-Expected flow:
+Final state:
 
 ```text
-Resource exists in cluster
-        ↓
-Resource removed from Git
-        ↓
-Argo CD detects desired-state change
-        ↓
-Argo CD prunes resource
-        ↓
-Resource no longer exists
+Synced
+Healthy
 ```
 
-Status: `PENDING`
-
-## Evidence to Capture
-
-- Terraform EKS creation result
-- kubectl connectivity
-- Argo CD component health
-- AppProject details
-- Application details
-- sync and health status
-- workload Pods
-- runtime image digests
-- drift detection evidence
-- self-healing evidence
-- pruning evidence
-- troubleshooting events
-
-## Phase Completion Criteria
+Validation status:
 
 ```text
-Local manifest validation        PASS
-Argo CD installed                PASS
-AppProject validated             PASS
-Application validated            PASS
-GitOps synchronization           PASS
-Application workloads healthy    PASS
-Immutable images verified        PASS
-Drift detection                  PASS
-Self-healing                     PASS
-Pruning                          PASS
-Documentation updated            PASS
+PASS
 ```
 
-Until live validation is complete, the GitOps design is locally implemented but not fully validated against the runtime environment.
+---
+
+## AppProject Least-Privilege Enforcement Validation
+
+A temporary ConfigMap was introduced through Git.
+
+The Baba App `AppProject` permitted only:
+
+```text
+Deployment
+Service
+```
+
+Argo CD rejected the ConfigMap with:
+
+```text
+resource :ConfigMap is not permitted in project baba-app
+```
+
+The whitelist was not weakened for the test.
+
+Validation status:
+
+```text
+PASS
+```
+
+---
+
+## Pruning Validation
+
+A temporary Git-managed Service was created:
+
+```text
+baba-app-prune-test
+```
+
+Argo CD created it after the Git change.
+
+The Service was then removed from Git.
+
+Because the Application configures:
+
+```yaml
+prune: true
+```
+
+Argo CD automatically deleted it.
+
+Final verification:
+
+```text
+Error from server (NotFound): services "baba-app-prune-test" not found
+```
+
+Validation status:
+
+```text
+PASS
+```
+
+---
+
+## Phase 06 Live Validation Outcome
+
+```text
+EKS recreation                         PASS
+Argo CD installation                   PASS
+Argo CD CRDs                           PASS
+AppProject creation                    PASS
+Application creation                   PASS
+Kustomize reconciliation               PASS
+Application synchronization            PASS
+Backend workload health                PASS
+Frontend workload health               PASS
+Immutable artifact deployment          PASS
+Drift remediation / self-healing       PASS
+AppProject least-privilege enforcement PASS
+Automated pruning                      PASS
+```
+
+Phase 06 GitOps functionality has now been validated against the live Amazon EKS environment.

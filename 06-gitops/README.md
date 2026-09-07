@@ -137,7 +137,7 @@ kubectl kustomize 06-gitops/manifests/overlays/dev | grep "image:"
 git diff --check
 ```
 
-## Live Validation Plan
+## Live Validation Results
 
 1. Recreate EKS.
 2. Install Argo CD.
@@ -170,3 +170,27 @@ Kustomize = environment configuration layer
 ECR digest = immutable deployable artifact
 EKS = runtime platform
 ```
+
+## Live Validation Summary
+
+The Phase 06 GitOps architecture was successfully validated against a live Amazon EKS environment.
+
+Validated capabilities include:
+
+- Argo CD synchronization
+- healthy backend and frontend deployment
+- deployment by immutable ECR digest
+- configuration drift remediation
+- automated self-healing
+- AppProject resource authorization enforcement
+- automatic pruning of resources removed from Git
+
+The EKS environment is temporary and will be destroyed after final Phase 06 validation and documentation are complete to minimize ongoing AWS cost.
+
+The committed Argo CD Application remains configured for:
+
+```text
+targetRevision: main
+```
+
+The feature branch was used only as a temporary live-validation target before merge.
