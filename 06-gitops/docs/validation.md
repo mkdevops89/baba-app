@@ -418,3 +418,53 @@ Automated pruning                      PASS
 ```
 
 Phase 06 GitOps functionality has now been validated against the live Amazon EKS environment.
+
+## Post-Merge Validation
+
+After Phase 06 was merged into `main`, the live Argo CD Application was refreshed and successfully reconciled from the permanent branch.
+
+Argo CD source:
+
+```text
+targetRevision: main
+```
+
+Reconciled revision:
+
+```text
+9bbdeaf86246d17a0c6f55013cc9ed8e3c551480
+```
+
+Final application state:
+
+```text
+Sync Status: Synced
+Health Status: Healthy
+```
+
+Runtime workload state:
+
+```text
+Backend Pods:  2/2 Running
+Frontend Pods: 2/2 Running
+```
+
+Backend image:
+
+```text
+406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-backend@sha256:88f9c5203ea301c780029f7b9a62d3c0777d4d037ed7738093777b723d2a7a74
+```
+
+Frontend image:
+
+```text
+406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-frontend@sha256:de401212938d47baddf5432aa54c6ce0ce0eb193f488706126003163a898f59b
+```
+
+This confirmed that the permanent GitOps flow was operating from `main`, Argo CD successfully reconciled the approved desired state, all application workloads remained healthy, and the exact immutable Phase 05 artifacts continued to run in Amazon EKS.
+
+Validation status:
+
+```text
+PASS
+```
