@@ -3,6 +3,7 @@ kind: Kustomization
 
 resources:
   - namespace.yaml
+  - prune-test-configmap.yaml
   - ../../base
 
 namespace: baba-app

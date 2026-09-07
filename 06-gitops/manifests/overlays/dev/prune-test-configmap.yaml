@@ -1,0 +1,7 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: baba-app-prune-test
+  namespace: baba-app
+data:
+  purpose: "Temporary resource used to validate Argo CD pruning."
