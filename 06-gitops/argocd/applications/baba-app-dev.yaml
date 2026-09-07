@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: baba-app-dev
+  namespace: argocd
+spec:
+  # Use the restricted Baba App AppProject instead of Argo CD's
+  # unrestricted default project.
+  project: baba-app
+
+  source:
+    repoURL: https://github.com/mkdevops89/baba-app.git
+
+    # Argo CD will follow main after the Phase 06 pull request is merged.
+    targetRevision: main
+
+    # Kustomize renders the development overlay and its immutable
+    # ECR image digests.
+    path: 06-gitops/manifests/overlays/dev
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: baba-app
+
+  syncPolicy:
+    automated:
+      # Remove resources that are deleted from Git.
+      prune: true
+
+      # Restore Git-declared state when someone changes a managed
+      # resource directly in Kubernetes.
+      selfHeal: true
+
+    syncOptions:
+      # Namespace is declared in Git, so Argo CD should not silently
+      # create an unmanaged namespace for us.
+      - CreateNamespace=false

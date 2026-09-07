@@ -1,0 +1,29 @@
+apiVersion: argoproj.io/v1alpha1
+kind: AppProject
+metadata:
+  name: baba-app
+  namespace: argocd
+spec:
+  description: GitOps project for the Baba App development environment.
+
+  # Restrict Argo CD to the Baba App repository as the deployment source.
+  sourceRepos:
+    - https://github.com/mkdevops89/baba-app.git
+
+  # Restrict deployments to the in-cluster Kubernetes API
+  # and only the baba-app namespace.
+  destinations:
+    - server: https://kubernetes.default.svc
+      namespace: baba-app
+
+  # Allow only the namespace-scoped resources required by the application.
+  namespaceResourceWhitelist:
+    - group: apps
+      kind: Deployment
+    - group: ""
+      kind: Service
+
+  # The Namespace resource is cluster-scoped, so it must be explicitly allowed.
+  clusterResourceWhitelist:
+    - group: ""
+      kind: Namespace
