@@ -63,3 +63,16 @@ variable "cluster_public_access_cidrs" {
   type        = list(string)
 
 }
+
+# -----------------------------------------------------------------------------
+# EKS Lifecycle
+# -----------------------------------------------------------------------------
+# Controls whether the development EKS runtime is provisioned.
+#
+# This allows the environment to intentionally represent EKS as either present
+# or absent without relying on targeted Terraform operations.
+variable "enable_eks" {
+  description = "Whether to provision the Baba App development EKS cluster and managed node group."
+  type        = bool
+  default     = false
+}

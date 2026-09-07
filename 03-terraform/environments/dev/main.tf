@@ -32,7 +32,12 @@ module "ecr" {
 #
 # Public API access is restricted to explicitly approved administrator CIDRs,
 # while private API access remains enabled for in-VPC communication.
+# EKS is intentionally optional in development so the higher-cost runtime can
+# be shut down without removing the long-lived VPC, ECR, KMS, and CI/CD
+# foundation.
 module "eks" {
+  count = var.enable_eks ? 1 : 0
+
   source = "../../modules/eks"
 
   project_name                = var.project_name

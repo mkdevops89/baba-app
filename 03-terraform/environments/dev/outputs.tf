@@ -63,19 +63,24 @@ output "backend_ecr_repository_arn" {
   value       = module.ecr.backend_repository_arn
 }
 
+# -----------------------------------------------------------------------------
+# EKS outputs
+# -----------------------------------------------------------------------------
+# When EKS is disabled, these outputs return null instead of failing because the
+# module has zero instances.
 output "eks_cluster_name" {
-  description = "Name of the Baba App EKS cluster"
-  value       = module.eks.cluster_name
+  description = "Name of the Baba App EKS cluster when EKS is enabled."
+  value       = var.enable_eks ? module.eks[0].cluster_name : null
 }
 
 output "eks_cluster_endpoint" {
-  description = "Endpoint of the Baba App EKS cluster"
-  value       = module.eks.cluster_endpoint
+  description = "Endpoint of the Baba App EKS cluster when EKS is enabled."
+  value       = var.enable_eks ? module.eks[0].cluster_endpoint : null
 }
 
 output "eks_node_group_name" {
-  description = "Name of the Baba App EKS managed node group"
-  value       = module.eks.node_group_name
+  description = "Name of the Baba App EKS managed node group when EKS is enabled."
+  value       = var.enable_eks ? module.eks[0].node_group_name : null
 }
 
 # -----------------------------------------------------------------------------
