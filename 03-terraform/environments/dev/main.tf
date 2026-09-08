@@ -65,3 +65,29 @@ module "cicd_iam" {
     module.ecr.frontend_repository_arn
   ]
 }
+
+# -----------------------------------------------------------------------------
+# Infrastructure Automation IAM
+# -----------------------------------------------------------------------------
+# Provides GitHub Actions with a dedicated OIDC-backed identity for controlled
+# Terraform and EKS lifecycle operations.
+#
+# This role is intentionally separate from the CI/CD ECR publishing role so
+# artifact publication does not automatically grant infrastructure privileges.
+module "automation_iam" {
+  source = "../../modules/automation-iam"
+
+  project_name         = var.project_name
+  environment          = var.environment
+  github_owner         = "mkdevops89"
+  github_owner_id      = "251259091"
+  github_repository    = "baba-app"
+  github_repository_id = "1355057456"
+
+  github_oidc_provider_arn = module.cicd_iam.github_oidc_provider_arn
+
+  terraform_state_bucket_arn = "arn:aws:s3:::baba-app-dev-terraform-state-406312601212"
+  terraform_state_key        = "environments/dev/terraform.tfstate"
+
+  terraform_state_kms_key_arn = "arn:aws:kms:us-east-1:406312601212:key/6ebf8690-f47b-47d9-be76-8f76a9f70bc2"
+}

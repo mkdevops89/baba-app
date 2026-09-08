@@ -96,3 +96,8 @@ output "github_oidc_provider_arn" {
   description = "GitHub Actions OIDC provider ARN."
   value       = module.cicd_iam.github_oidc_provider_arn
 }
+
+output "github_actions_infrastructure_role_arn" {
+  description = "IAM role ARN used by GitHub Actions for controlled infrastructure lifecycle operations."
+  value       = module.automation_iam.github_actions_infrastructure_role_arn
+}
