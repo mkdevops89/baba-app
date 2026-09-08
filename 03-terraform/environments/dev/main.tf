@@ -75,7 +75,8 @@ module "cicd_iam" {
 # This role is intentionally separate from the CI/CD ECR publishing role so
 # artifact publication does not automatically grant infrastructure privileges.
 module "automation_iam" {
-  source = "../../modules/automation-iam"
+  source             = "../../modules/automation-iam"
+  github_environment = "infrastructure-dev"
 
   project_name         = var.project_name
   environment          = var.environment

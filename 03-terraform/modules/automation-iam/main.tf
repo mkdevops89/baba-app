@@ -5,8 +5,11 @@
 # publishing role. This preserves separation of duties between container
 # publication and infrastructure lifecycle management.
 #
-# Only the immutable Baba App repository identity running from main may assume
-# this role through GitHub Actions OIDC.
+# Only the immutable Baba App repository identity operating through the
+# protected infrastructure GitHub Environment may assume this role.
+#
+# GitHub Environment protection provides an additional approval boundary
+# before AWS credentials can be issued for infrastructure lifecycle actions.
 data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
     sid     = "AllowBabaAppMainGitHubActions"
@@ -35,7 +38,7 @@ data "aws_iam_policy_document" "github_actions_assume_role" {
       variable = "token.actions.githubusercontent.com:sub"
 
       values = [
-        "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repository}@${var.github_repository_id}:ref:refs/heads/main"
+        "repo:${var.github_owner}@${var.github_owner_id}/${var.github_repository}@${var.github_repository_id}:environment:${var.github_environment}"
       ]
     }
   }

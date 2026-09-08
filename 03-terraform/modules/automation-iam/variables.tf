@@ -65,3 +65,8 @@ variable "terraform_state_kms_key_arn" {
   description = "ARN of the KMS key encrypting the development Terraform state."
   type        = string
 }
+
+variable "github_environment" {
+  description = "Protected GitHub Environment permitted to assume the infrastructure automation role."
+  type        = string
+}
