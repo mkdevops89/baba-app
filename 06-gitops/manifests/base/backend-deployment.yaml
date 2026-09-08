@@ -34,9 +34,14 @@ spec:
               protocol: TCP
 
           securityContext:
+            # Distroless :nonroot images use an unprivileged high-numbered identity.
+            # Declaring it explicitly prevents accidental execution as a host-like UID
+            # and makes the runtime identity enforceable by Kubernetes.
+            runAsNonRoot: true
+            runAsUser: 65532
+            runAsGroup: 65532
             allowPrivilegeEscalation: false
             readOnlyRootFilesystem: true
-            runAsNonRoot: true
             capabilities:
               drop:
                 - ALL

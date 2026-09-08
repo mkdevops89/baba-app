@@ -81,13 +81,35 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # Validate Kubernetes manifests against Checkov security policies.
-      - name: Run Checkov against Kubernetes manifests
+      # Install the kubectl version aligned with the Baba App EKS platform.
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.36.3"
+
+      # Render the development overlay so Checkov evaluates the same namespace,
+      # immutable image digests, and environment configuration that Argo CD deploys.
+      - name: Render GitOps development manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p .security-rendered
+
+          kubectl kustomize 06-gitops/manifests/overlays/dev \
+            > .security-rendered/gitops-dev.yaml
+
+      # CKV2_K8S_6 is intentionally deferred to Phase 14, where Kubernetes
+      # NetworkPolicies will be implemented.
+      #
+      # CKV_K8S_15 is accepted because Baba App deploys immutable SHA256 image
+      # digests, so image integrity does not depend on imagePullPolicy: Always.
+      - name: Run Checkov against rendered GitOps manifests
         uses: bridgecrewio/checkov-action@v12
         with:
-          directory: 06-gitops/manifests
+          file: .security-rendered/gitops-dev.yaml
           framework: kubernetes
-          skip_check: CKV2_K8S_6
+          skip_check: CKV2_K8S_6,CKV_K8S_15
           quiet: true
           soft_fail: false
 
@@ -100,12 +122,30 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v5
 
-      # Scan Kubernetes manifests and fail when HIGH or CRITICAL misconfigurations are detected.
-      - name: Run Trivy against Kubernetes manifests
+      # Install the kubectl version aligned with the Baba App EKS platform.
+      - name: Setup kubectl
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.36.3"
+
+      # Jobs run on separate runners, so Trivy must render its own copy of the
+      # GitOps development manifests rather than relying on the Checkov job.
+      - name: Render GitOps development manifests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p .security-rendered
+
+          kubectl kustomize 06-gitops/manifests/overlays/dev \
+            > .security-rendered/gitops-dev.yaml
+
+      # Scan the exact rendered configuration rather than reusable base manifests.
+      - name: Run Trivy against rendered GitOps manifests
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: config
-          scan-ref: 06-gitops/manifests
+          scan-ref: .security-rendered/gitops-dev.yaml
           severity: HIGH,CRITICAL
           exit-code: "1"
           ignore-unfixed: false
