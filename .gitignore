@@ -49,6 +49,3 @@ terraform.rc
 # Uncomment the line below if you want to ignore planout files.
 # planout.DS_Store
 .DS_Store
-
-# Local Terraform backend configuration
-03-terraform/environments/dev/backend.tf

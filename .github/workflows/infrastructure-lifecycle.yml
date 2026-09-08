@@ -1,0 +1,397 @@
+name: Infrastructure Lifecycle
+
+# -----------------------------------------------------------------------------
+# Trigger
+# -----------------------------------------------------------------------------
+# Infrastructure changes are intentionally manual. A source-code push must
+# never provision or destroy the EKS runtime automatically.
+on:
+  workflow_dispatch:
+    inputs:
+      action:
+        description: "Infrastructure lifecycle action"
+        required: true
+        type: choice
+        options:
+          - provision
+          - destroy
+
+      destroy_confirmation:
+        description: 'For destroy only, enter: DESTROY-EKS'
+        required: false
+        type: string
+
+# -----------------------------------------------------------------------------
+# Minimal GitHub token permissions
+# -----------------------------------------------------------------------------
+# id-token: write is required only so GitHub can exchange its OIDC identity for
+# short-lived AWS credentials. No AWS access keys are stored in GitHub.
+permissions:
+  contents: read
+  id-token: write
+
+# -----------------------------------------------------------------------------
+# Concurrency
+# -----------------------------------------------------------------------------
+# Only one development infrastructure lifecycle operation may run at a time.
+# This complements Terraform's native S3 state locking and avoids competing
+# provision/destroy workflows.
+concurrency:
+  group: baba-app-dev-infrastructure-lifecycle
+  cancel-in-progress: false
+
+env:
+  AWS_REGION: us-east-1
+
+  TF_VERSION: "1.14.0"
+  TF_WORKING_DIR: 03-terraform/environments/dev
+
+  AWS_INFRASTRUCTURE_ROLE_ARN: arn:aws:iam::406312601212:role/baba-app-dev-github-actions-infrastructure
+
+  EKS_CLUSTER_NAME: baba-app-dev-eks
+  EKS_NODE_GROUP_NAME: baba-app-dev-nodes
+
+jobs:
+
+  # ===========================================================================
+  # PLAN
+  # ===========================================================================
+  plan:
+    name: Plan Infrastructure Lifecycle
+    runs-on: ubuntu-latest
+
+    # The protected environment supplies the administrative EKS API CIDR and
+    # forms part of the GitHub OIDC identity trusted by AWS.
+    environment: infrastructure-dev
+
+    # Defense in depth: even if workflow_dispatch is invoked against another
+    # Git ref, infrastructure automation is permitted only from main.
+    if: github.ref == 'refs/heads/main'
+
+    outputs:
+      action: ${{ steps.lifecycle.outputs.action }}
+
+    steps:
+
+      # -----------------------------------------------------------------------
+      # Source
+      # -----------------------------------------------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # -----------------------------------------------------------------------
+      # Request validation
+      # -----------------------------------------------------------------------
+      # Destruction requires an explicit confirmation string in addition to the
+      # manually selected workflow action and protected Environment approval.
+      - name: Validate lifecycle request
+        shell: bash
+        env:
+          REQUESTED_ACTION: ${{ inputs.action }}
+          DESTROY_CONFIRMATION: ${{ inputs.destroy_confirmation }}
+          PUBLIC_ACCESS_CIDR: ${{ vars.EKS_PUBLIC_ACCESS_CIDR }}
+        run: |
+          set -euo pipefail
+
+          case "${REQUESTED_ACTION}" in
+            provision|destroy)
+              ;;
+            *)
+              echo "Unsupported lifecycle action: ${REQUESTED_ACTION}"
+              exit 1
+              ;;
+          esac
+
+          if [[ "${REQUESTED_ACTION}" == "destroy" ]] &&
+             [[ "${DESTROY_CONFIRMATION}" != "DESTROY-EKS" ]]; then
+            echo "Destroy request rejected."
+            echo 'destroy_confirmation must exactly equal: DESTROY-EKS'
+            exit 1
+          fi
+
+          if [[ -z "${PUBLIC_ACCESS_CIDR}" ]]; then
+            echo "EKS_PUBLIC_ACCESS_CIDR is not configured in infrastructure-dev."
+            exit 1
+          fi
+
+          # Baba App development administration intentionally permits only a
+          # single IPv4 host route to the public EKS API endpoint.
+          if [[ ! "${PUBLIC_ACCESS_CIDR}" =~ ^([0-9]{1,3}\.){3}[0-9]{1,3}/32$ ]]; then
+            echo "EKS_PUBLIC_ACCESS_CIDR must be an IPv4 /32 CIDR."
+            exit 1
+          fi
+
+      # -----------------------------------------------------------------------
+      # AWS OIDC
+      # -----------------------------------------------------------------------
+      # Exchange the GitHub OIDC token for short-lived credentials belonging
+      # to the dedicated infrastructure lifecycle IAM role.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_INFRASTRUCTURE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # Confirm the workflow obtained credentials in the intended AWS account.
+      - name: Verify AWS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ACCOUNT_ID=$(aws sts get-caller-identity \
+            --query Account \
+            --output text)
+
+          if [[ "${ACCOUNT_ID}" != "406312601212" ]]; then
+            echo "Unexpected AWS account: ${ACCOUNT_ID}"
+            exit 1
+          fi
+
+          aws sts get-caller-identity
+
+      # -----------------------------------------------------------------------
+      # Terraform
+      # -----------------------------------------------------------------------
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform format check
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform fmt -check -recursive ../../
+
+      # Remote state authentication uses the temporary AWS credentials already
+      # obtained through OIDC. No named AWS CLI profile is required.
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      - name: Terraform validate
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform validate
+
+      # -----------------------------------------------------------------------
+      # Terraform runtime variables
+      # -----------------------------------------------------------------------
+      # Terraform list values are passed using JSON so the runner does not need
+      # a committed terraform.tfvars file containing the real administrator IP.
+      - name: Configure Terraform lifecycle variables
+        id: lifecycle
+        shell: bash
+        env:
+          REQUESTED_ACTION: ${{ inputs.action }}
+          PUBLIC_ACCESS_CIDR: ${{ vars.EKS_PUBLIC_ACCESS_CIDR }}
+        run: |
+          set -euo pipefail
+
+          CIDR_JSON=$(jq -cn \
+            --arg cidr "${PUBLIC_ACCESS_CIDR}" \
+            '[$cidr]')
+
+          echo "TF_VAR_cluster_public_access_cidrs=${CIDR_JSON}" >> "${GITHUB_ENV}"
+
+          if [[ "${REQUESTED_ACTION}" == "provision" ]]; then
+            echo "TF_VAR_enable_eks=true" >> "${GITHUB_ENV}"
+          else
+            echo "TF_VAR_enable_eks=false" >> "${GITHUB_ENV}"
+          fi
+
+          echo "action=${REQUESTED_ACTION}" >> "${GITHUB_OUTPUT}"
+
+      # -----------------------------------------------------------------------
+      # Plan
+      # -----------------------------------------------------------------------
+      # A binary Terraform plan is created and later consumed by the apply job.
+      # This ensures apply executes the exact plan reviewed in this workflow.
+      - name: Terraform plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform plan \
+            -input=false \
+            -out=phase07-lifecycle.tfplan
+
+      # Produce a human-readable representation for the workflow evidence.
+      - name: Render Terraform plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform show \
+            -no-color \
+            phase07-lifecycle.tfplan \
+            > phase07-lifecycle-plan.txt
+
+      # Capture only the high-level plan summary in the GitHub job summary.
+      - name: Record plan summary
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        shell: bash
+        run: |
+          {
+            echo "## Phase 07 Infrastructure Lifecycle Plan"
+            echo
+            echo "**Requested action:** \`${{ inputs.action }}\`"
+            echo
+            echo '```text'
+            grep -E '^Plan:|^No changes\.' phase07-lifecycle-plan.txt || true
+            echo '```'
+          } >> "${GITHUB_STEP_SUMMARY}"
+
+      # The binary plan crosses the job boundary through a short-lived GitHub
+      # Actions artifact. Terraform plans may contain infrastructure metadata,
+      # so retention is intentionally limited.
+      - name: Upload Terraform plan
+        uses: actions/upload-artifact@v4
+        with:
+          name: phase07-lifecycle-plan-${{ github.run_id }}
+          path: |
+            ${{ env.TF_WORKING_DIR }}/phase07-lifecycle.tfplan
+            ${{ env.TF_WORKING_DIR }}/phase07-lifecycle-plan.txt
+          retention-days: 1
+          if-no-files-found: error
+
+
+  # ===========================================================================
+  # APPLY
+  # ===========================================================================
+  apply:
+    name: Apply Infrastructure Lifecycle
+    runs-on: ubuntu-latest
+    needs: plan
+
+    # Enter the protected Environment again before infrastructure state changes
+    # are executed.
+    environment: infrastructure-dev
+
+    if: |
+      github.ref == 'refs/heads/main' &&
+      needs.plan.result == 'success'
+
+    steps:
+
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      # Re-authenticate independently. Credentials from the plan job are not
+      # persisted or shared with the apply job.
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v5
+        with:
+          role-to-assume: ${{ env.AWS_INFRASTRUCTURE_ROLE_ARN }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Verify AWS identity
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          ACCOUNT_ID=$(aws sts get-caller-identity \
+            --query Account \
+            --output text)
+
+          if [[ "${ACCOUNT_ID}" != "406312601212" ]]; then
+            echo "Unexpected AWS account: ${ACCOUNT_ID}"
+            exit 1
+          fi
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ env.TF_VERSION }}
+          terraform_wrapper: false
+
+      - name: Terraform init
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: terraform init -input=false
+
+      # Retrieve the exact binary plan produced by the plan job rather than
+      # generating a new plan immediately before apply.
+      - name: Download Terraform plan
+        uses: actions/download-artifact@v5
+        with:
+          name: phase07-lifecycle-plan-${{ github.run_id }}
+          path: ${{ env.TF_WORKING_DIR }}
+
+      - name: Apply reviewed Terraform plan
+        working-directory: ${{ env.TF_WORKING_DIR }}
+        run: |
+          terraform apply \
+            -input=false \
+            -auto-approve \
+            phase07-lifecycle.tfplan
+
+      # -----------------------------------------------------------------------
+      # Post-action validation
+      # -----------------------------------------------------------------------
+      - name: Setup kubectl
+        if: inputs.action == 'provision'
+        uses: azure/setup-kubectl@v4
+        with:
+          version: "v1.36.3"
+
+      - name: Validate EKS provision
+        if: inputs.action == 'provision'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          STATUS=$(aws eks describe-cluster \
+            --name "${EKS_CLUSTER_NAME}" \
+            --region "${AWS_REGION}" \
+            --query 'cluster.status' \
+            --output text)
+
+          if [[ "${STATUS}" != "ACTIVE" ]]; then
+            echo "EKS cluster is not ACTIVE: ${STATUS}"
+            exit 1
+          fi
+
+          aws eks update-kubeconfig \
+            --name "${EKS_CLUSTER_NAME}" \
+            --region "${AWS_REGION}"
+
+          kubectl wait \
+            --for=condition=Ready \
+            nodes \
+            --all \
+            --timeout=10m
+
+          kubectl get nodes -o wide
+
+      - name: Validate EKS destruction
+        if: inputs.action == 'destroy'
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          if aws eks describe-cluster \
+            --name "${EKS_CLUSTER_NAME}" \
+            --region "${AWS_REGION}" \
+            >/dev/null 2>&1; then
+            echo "EKS cluster still exists after destroy."
+            exit 1
+          fi
+
+          if terraform \
+            -chdir="${TF_WORKING_DIR}" \
+            state list | grep -q '^module\.eks'; then
+            echo "EKS resources remain in Terraform state."
+            exit 1
+          fi
+
+          echo "EKS cluster is absent and module.eks is absent from Terraform state."
+
+      - name: Record lifecycle result
+        shell: bash
+        run: |
+          {
+            echo "## Phase 07 Infrastructure Lifecycle Result"
+            echo
+            echo "**Action:** \`${{ inputs.action }}\`"
+            echo
+            echo "**AWS Region:** \`${AWS_REGION}\`"
+            echo
+            echo "**Cluster:** \`${EKS_CLUSTER_NAME}\`"
+            echo
+            echo
+            echo "Lifecycle operation completed successfully."
+          } >> "${GITHUB_STEP_SUMMARY}"
