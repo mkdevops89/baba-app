@@ -180,7 +180,7 @@ prometheusOperator:
       memory: 128Mi
     limits:
       cpu: 300m
-      memory: 256Mi
+      memory: 512Mi
 
 # -----------------------------------------------------------------------------
 # Kubernetes control-plane monitoring
