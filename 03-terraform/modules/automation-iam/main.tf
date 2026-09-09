@@ -224,6 +224,7 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       "kms:ListResourceTags",
       "kms:GetKeyRotationStatus",
       "kms:ListAliases",
+      "logs:ListTagsForResource",
       "logs:DescribeLogGroups",
       "iam:GetRolePolicy",
       "iam:ListRolePolicies"
