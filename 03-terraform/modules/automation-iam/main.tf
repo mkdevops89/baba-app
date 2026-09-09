@@ -176,6 +176,7 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       "iam:UntagRole",
       "iam:AttachRolePolicy",
       "iam:DetachRolePolicy",
+      "iam:ListInstanceProfilesForRole",
       "iam:ListAttachedRolePolicies"
     ]
 
