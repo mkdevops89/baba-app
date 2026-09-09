@@ -1,0 +1,222 @@
+# -----------------------------------------------------------------------------
+# Baba App Phase 08 — kube-prometheus-stack
+# -----------------------------------------------------------------------------
+# Development observability configuration.
+#
+# Goals:
+# - keep observability private by default
+# - provide Kubernetes metrics and dashboards
+# - use bounded retention
+# - avoid unnecessary storage cost
+# - apply explicit workload resources
+# - preserve compatibility with later security phases
+# -----------------------------------------------------------------------------
+
+nameOverride: baba-observability
+
+commonLabels:
+  app.kubernetes.io/part-of: baba-app
+  environment: dev
+  managed-by: argocd
+
+# -----------------------------------------------------------------------------
+# Default monitoring and alerting rules
+# -----------------------------------------------------------------------------
+
+defaultRules:
+  create: true
+
+# -----------------------------------------------------------------------------
+# Grafana
+# -----------------------------------------------------------------------------
+
+grafana:
+  enabled: true
+
+  # Grafana is intentionally internal-only.
+  service:
+    type: ClusterIP
+
+  # Anonymous access must remain disabled.
+  grafana.ini:
+    auth.anonymous:
+      enabled: false
+
+    users:
+      allow_sign_up: false
+
+  # Use a separately created Kubernetes Secret for Grafana administrator
+  # credentials so Helm rendering remains deterministic and credentials are
+  # never committed to Git.
+  admin:
+    existingSecret: baba-observability-grafana-admin
+    userKey: admin-user
+    passwordKey: admin-password
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+  persistence:
+    enabled: false
+
+# -----------------------------------------------------------------------------
+# Prometheus
+# -----------------------------------------------------------------------------
+
+prometheus:
+  enabled: true
+
+  service:
+    type: ClusterIP
+
+  prometheusSpec:
+    # Development retention is intentionally short to control storage usage.
+    retention: 7d
+
+    # Bound the local metrics database size.
+    retentionSize: 4GB
+
+    resources:
+      requests:
+        cpu: 200m
+        memory: 512Mi
+      limits:
+        cpu: "1"
+        memory: 1Gi
+
+    # Discover ServiceMonitor and PodMonitor resources created outside this
+    # Helm release when they match the configured namespace selectors.
+    serviceMonitorSelectorNilUsesHelmValues: false
+    podMonitorSelectorNilUsesHelmValues: false
+
+    # Phase 08 starts without persistent Prometheus storage.
+    #
+    # This keeps the development environment inexpensive and makes the
+    # monitoring layer disposable with the EKS lifecycle.
+    storageSpec: {}
+
+# -----------------------------------------------------------------------------
+# Alertmanager
+# -----------------------------------------------------------------------------
+
+alertmanager:
+  enabled: true
+
+  service:
+    type: ClusterIP
+
+  alertmanagerSpec:
+    resources:
+      requests:
+        cpu: 50m
+        memory: 64Mi
+      limits:
+        cpu: 200m
+        memory: 256Mi
+
+    storage: {}
+
+  # No external receivers are configured yet.
+  #
+  # Notification integrations will be added only after credentials can be
+  # supplied securely without committing secrets to Git.
+  config:
+    global:
+      resolve_timeout: 5m
+
+    route:
+      group_by:
+        - namespace
+        - alertname
+      group_wait: 30s
+      group_interval: 5m
+      repeat_interval: 12h
+      receiver: "null"
+
+    receivers:
+      - name: "null"
+
+# -----------------------------------------------------------------------------
+# Kubernetes object-state metrics
+# -----------------------------------------------------------------------------
+
+kube-state-metrics:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+# -----------------------------------------------------------------------------
+# Node metrics
+# -----------------------------------------------------------------------------
+
+prometheus-node-exporter:
+  resources:
+    requests:
+      cpu: 50m
+      memory: 64Mi
+    limits:
+      cpu: 200m
+      memory: 128Mi
+
+# -----------------------------------------------------------------------------
+# Prometheus Operator
+# -----------------------------------------------------------------------------
+
+prometheusOperator:
+  enabled: true
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 128Mi
+    limits:
+      cpu: 300m
+      memory: 256Mi
+
+# -----------------------------------------------------------------------------
+# Kubernetes control-plane monitoring
+# -----------------------------------------------------------------------------
+# EKS manages several control-plane components outside the worker-node cluster.
+# Disable monitors that assume direct access to self-managed control-plane pods.
+# AWS-native EKS control-plane logging remains available through CloudWatch.
+# -----------------------------------------------------------------------------
+
+kubeControllerManager:
+  enabled: false
+
+kubeScheduler:
+  enabled: false
+
+kubeEtcd:
+  enabled: false
+
+# API server metrics remain useful and reachable through the Kubernetes API.
+kubeApiServer:
+  enabled: true
+
+# -----------------------------------------------------------------------------
+# Core Kubernetes monitoring
+# -----------------------------------------------------------------------------
+
+kubelet:
+  enabled: true
+
+# CoreDNS and kube-proxy monitoring would require Argo CD to create monitoring
+# resources inside the kube-system namespace.
+#
+# Keep them disabled in Phase 08 so the observability AppProject can remain
+# constrained to the dedicated observability namespace.
+coreDns:
+  enabled: false
+
+kubeProxy:
+  enabled: false
