@@ -44,6 +44,7 @@ module "eks" {
   environment                 = var.environment
   private_subnet_ids          = module.vpc.private_subnet_ids
   cluster_public_access_cidrs = var.cluster_public_access_cidrs
+  cluster_admin_principal_arn = var.eks_cluster_admin_principal_arn
 }
 
 # -----------------------------------------------------------------------------

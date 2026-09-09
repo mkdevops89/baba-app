@@ -70,3 +70,10 @@ variable "enable_eks" {
   type        = bool
   default     = false
 }
+
+variable "eks_cluster_admin_principal_arn" {
+  description = "IAM role ARN granted administrative Kubernetes access to the development EKS cluster."
+  type        = string
+  default     = null
+  nullable    = true
+}
