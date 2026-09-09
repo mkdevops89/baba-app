@@ -56,3 +56,10 @@ variable "cluster_public_access_cidrs" {
     error_message = "EKS public API access must not allow 0.0.0.0/0 or ::/0."
   }
 }
+
+variable "cluster_admin_principal_arn" {
+  description = "Optional IAM role ARN granted cluster-admin access through the EKS Access API."
+  type        = string
+  default     = null
+  nullable    = true
+}

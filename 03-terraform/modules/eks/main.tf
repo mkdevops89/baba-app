@@ -56,6 +56,10 @@ resource "aws_eks_cluster" "this" {
   name     = "${var.project_name}-${var.environment}-eks"
   role_arn = aws_iam_role.cluster.arn
   version  = var.cluster_version
+  access_config {
+    authentication_mode                         = "API_AND_CONFIG_MAP"
+    bootstrap_cluster_creator_admin_permissions = true
+  }
 
   # Export all EKS control-plane log types to CloudWatch for
   # security auditing, authentication visibility, and troubleshooting.
@@ -80,6 +84,36 @@ resource "aws_eks_cluster" "this" {
 
   tags = {
     Name = "${var.project_name}-${var.environment}-eks"
+  }
+}
+
+# -----------------------------------------------------------------------------
+# EKS administrative access
+# -----------------------------------------------------------------------------
+# Administrative Kubernetes access is managed through the EKS Access API
+# instead of relying exclusively on the legacy aws-auth ConfigMap.
+#
+# The principal is supplied by the calling environment so this module remains
+# reusable across AWS accounts and Identity Center deployments.
+
+resource "aws_eks_access_entry" "cluster_admin" {
+  count = var.cluster_admin_principal_arn != null ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = var.cluster_admin_principal_arn
+  type          = "STANDARD"
+}
+
+resource "aws_eks_access_policy_association" "cluster_admin" {
+  count = var.cluster_admin_principal_arn != null ? 1 : 0
+
+  cluster_name  = aws_eks_cluster.this.name
+  principal_arn = aws_eks_access_entry.cluster_admin[0].principal_arn
+
+  policy_arn = "arn:aws:eks::aws:cluster-access-policy/AmazonEKSClusterAdminPolicy"
+
+  access_scope {
+    type = "cluster"
   }
 }
 
