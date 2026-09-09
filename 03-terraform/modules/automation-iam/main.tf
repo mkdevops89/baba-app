@@ -142,7 +142,18 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       "eks:CreateNodegroup",
       "eks:DeleteNodegroup",
       "eks:DescribeNodegroup",
-      "eks:ListNodegroups"
+      "eks:ListNodegroups",
+
+      # EKS Access API permissions allow Terraform to manage the approved
+      # administrative access entry and its cluster access policy association.
+      "eks:CreateAccessEntry",
+      "eks:DescribeAccessEntry",
+      "eks:DeleteAccessEntry",
+      "eks:UpdateAccessEntry",
+      "eks:ListAccessEntries",
+      "eks:AssociateAccessPolicy",
+      "eks:DisassociateAccessPolicy",
+      "eks:ListAssociatedAccessPolicies"
     ]
 
     resources = ["*"]
