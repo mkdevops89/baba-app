@@ -322,12 +322,6 @@ jobs:
       # -----------------------------------------------------------------------
       # Post-action validation
       # -----------------------------------------------------------------------
-      - name: Setup kubectl
-        if: inputs.action == 'provision'
-        uses: azure/setup-kubectl@v4
-        with:
-          version: "v1.36.3"
-
       - name: Validate EKS provision
         if: inputs.action == 'provision'
         shell: bash
