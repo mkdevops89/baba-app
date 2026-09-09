@@ -191,6 +191,7 @@ jobs:
             '[$cidr]')
 
           echo "TF_VAR_cluster_public_access_cidrs=${CIDR_JSON}" >> "${GITHUB_ENV}"
+          echo "TF_VAR_eks_cluster_admin_principal_arn=${{ vars.EKS_CLUSTER_ADMIN_PRINCIPAL_ARN }}" >> "${GITHUB_ENV}"
 
           if [[ "${REQUESTED_ACTION}" == "provision" ]]; then
             echo "TF_VAR_enable_eks=true" >> "${GITHUB_ENV}"
