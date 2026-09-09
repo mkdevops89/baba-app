@@ -221,6 +221,7 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       "iam:ListPolicyVersions",
       "kms:DescribeKey",
       "kms:GetKeyPolicy",
+      "kms:ListResourceTags",
       "kms:GetKeyRotationStatus",
       "kms:ListAliases",
       "logs:DescribeLogGroups",
