@@ -34,3 +34,23 @@ vulnerabilities:
       Debian 13 distroless runtime dependency. No fixed package version is
       currently available. Reassess when Debian or Distroless publishes an
       updated util-linux/libuuid1 package.
+
+  - id: CVE-2026-76956
+    purls:
+      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
+    expired_at: 2026-10-11
+    statement: >-
+      Debian 13 distroless runtime dependency. Debian Trixie currently
+      does not provide a fixed libexpat1 package for this CVE. The Baba App
+      application JAR is not affected. Reassess when Debian or the distroless
+      runtime publishes an updated libexpat1 package.
+
+  - id: CVE-2026-76957
+    purls:
+      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
+    expired_at: 2026-10-11
+    statement: >-
+      Debian 13 distroless runtime dependency. Debian Trixie currently
+      does not provide a fixed libexpat1 package for this CVE. The Baba App
+      application JAR is not affected. Reassess when Debian or the distroless
+      runtime publishes an updated libexpat1 package.
