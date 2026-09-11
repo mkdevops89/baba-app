@@ -6,3 +6,4 @@ kind: Kustomization
 # define Baba App-specific monitoring integrations.
 resources:
   - baba-app-servicemonitor.yaml
+  - baba-app-dashboard.yaml
