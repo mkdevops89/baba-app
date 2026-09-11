@@ -80,7 +80,7 @@ data:
           },
           "targets": [
             {
-              "expr": "sum(rate(http_server_requests_seconds_count{job=\"baba-app-backend-metrics\"}[5m]))",
+              "expr": "sum(rate(http_server_requests_seconds_count{job=\"baba-app-backend-metrics\",status=~\"5..\"}[5m])) or vector(0)",
               "refId": "A"
             }
           ],
