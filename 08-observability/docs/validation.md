@@ -496,6 +496,131 @@ Phase 08 can be considered complete when:
 
 ## Phase Status
 
-**Phase 08 Validation — Pending Implementation**
+## Live Validation and Troubleshooting Results
 
-This document will be updated with actual workflow runs, commands, outputs, screenshots, alert evidence, troubleshooting events, and final steady-state validation as Phase 08 is implemented.
+### Fresh EKS Reprovision Validation
+
+The Phase 08 observability stack was validated after completely destroying and reprovisioning the EKS cluster.
+
+The following components were restored successfully through Terraform, Argo CD, Helm, and GitOps:
+
+- Prometheus
+- Grafana
+- Alertmanager
+- kube-state-metrics
+- node-exporter
+- Prometheus Operator
+- Kubernetes ServiceMonitors and PrometheusRules
+
+This fresh-cluster deployment confirmed that the Phase 08 configuration is reproducible and not dependent on leftover Kubernetes state.
+
+### Server-Side Apply for Prometheus CRDs
+
+The initial observability deployment encountered issues applying large Prometheus Operator CustomResourceDefinitions through Argo CD.
+
+The Argo CD Application was updated with:
+
+```yaml
+syncOptions:
+  - CreateNamespace=false
+  - ServerSideApply=true
+```
+
+Server-side apply allowed Argo CD to successfully manage the full Prometheus Operator CRD set.
+
+### Grafana Memory Exhaustion
+
+Grafana initially restarted with:
+
+```text
+Reason: OOMKilled
+Exit Code: 137
+```
+
+The Grafana memory allocation was increased to:
+
+```yaml
+resources:
+  requests:
+    cpu: 100m
+    memory: 256Mi
+  limits:
+    cpu: 300m
+    memory: 512Mi
+```
+
+After the GitOps rollout, the replacement Grafana pod remained stable with a restart count of zero.
+
+### Admission Webhook TLS Remediation
+
+Prometheus Operator logs showed repeated TLS errors:
+
+```text
+remote error: tls: bad certificate
+```
+
+Both the MutatingWebhookConfiguration and ValidatingWebhookConfiguration initially contained empty `caBundle` fields.
+
+The Prometheus Operator admission webhook patch process was configured to run as an Argo CD PreSync hook.
+
+After remediation:
+
+- Mutating webhook `caBundle` was populated.
+- Validating webhook `caBundle` was populated.
+- Admission certificate patch jobs completed successfully.
+- Repeated `bad certificate` errors stopped.
+
+This restored trusted TLS communication for Prometheus Operator admission webhooks.
+
+### Prometheus Status Reconciliation Anomaly
+
+The Prometheus workload is operational, but the Prometheus custom resource continues to report:
+
+```text
+Available=False
+Reason=StatefulSetNotFound
+```
+
+The operator reports:
+
+```text
+shard 0: statefulset observability/prometheus-baba-observability-prometheus not found
+```
+
+However, live validation confirmed:
+
+- `prometheus-baba-observability-prometheus` exists.
+- The StatefulSet reports `1/1 Ready`.
+- The StatefulSet labels match the Prometheus CR selector.
+- The StatefulSet owner reference UID matches the Prometheus CR UID.
+- Prometheus responds successfully to its readiness endpoint.
+- Prometheus API queries return successful metric results.
+- Grafana successfully queries the Prometheus datasource.
+- Kubernetes dashboards display live cluster, node, namespace, pod, CPU, and memory metrics.
+
+The remaining Argo CD `Degraded` state is therefore documented as a Prometheus Operator status-reconciliation anomaly rather than a monitoring service outage.
+
+Healthy resources were intentionally not deleted solely to force a cosmetic health-state change.
+
+## Observability Validation Outcome
+
+Phase 08 successfully provides operational visibility across:
+
+- EKS worker nodes
+- Kubernetes namespaces
+- Pods and containers
+- CPU utilization
+- Memory utilization
+- Resource requests and limits
+- Kubernetes API server
+- kubelet and cAdvisor
+- kube-state-metrics
+- node-exporter
+- Prometheus
+- Grafana
+- Alertmanager
+- Prometheus Operator
+
+Grafana dashboards successfully provide cluster-level, node-level, and pod-level drill-down capabilities.
+
+Application-specific Baba App metrics are planned as an additional observability enhancement.
