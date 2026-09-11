@@ -180,7 +180,39 @@ prometheusOperator:
       memory: 128Mi
     limits:
       cpu: 300m
-      memory: 512Mi
+      memory: 256Mi
+
+  # Enable the Prometheus Operator admission webhooks.
+  # These webhooks validate and mutate Prometheus custom resources such as
+  # PrometheusRule objects before Kubernetes accepts them.
+  admissionWebhooks:
+    enabled: true
+
+  # Argo CD should treat the webhook-related resources as a PreSync hook.
+  # This helps ensure admission webhook dependencies are prepared before
+  # the rest of the monitoring stack is reconciled.
+    annotations:
+      argocd.argoproj.io/hook: PreSync
+
+      # Remove the hook resource after it completes successfully so the
+      # cluster does not retain unnecessary completed hook resources.
+      argocd.argoproj.io/hook-delete-policy: HookSucceeded
+
+    patch:
+      # Enable the webhook certificate patch process.
+      # This step injects the generated CA certificate into the
+      # MutatingWebhookConfiguration and ValidatingWebhookConfiguration.
+      enabled: true
+
+      # Run the certificate patch process before normal application sync.
+      # Without this patch, the webhook caBundle can remain empty and cause
+      # TLS "bad certificate" errors between Kubernetes and the operator.
+      annotations:
+        argocd.argoproj.io/hook: PreSync
+
+        # Clean up the successful Argo CD hook after the CA bundle has
+        # been patched into the webhook configurations.
+        argocd.argoproj.io/hook-delete-policy: HookSucceeded
 
 # -----------------------------------------------------------------------------
 # Kubernetes control-plane monitoring
