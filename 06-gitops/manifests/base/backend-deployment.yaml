@@ -33,6 +33,12 @@ spec:
               containerPort: 8080
               protocol: TCP
 
+            # Dedicated Spring Boot management port used for health and metrics.
+            # This keeps Prometheus scraping separate from application traffic.
+            - name: management
+              containerPort: 8081
+              protocol: TCP
+
           securityContext:
             # Distroless :nonroot images use an unprivileged high-numbered identity.
             # Declaring it explicitly prevents accidental execution as a host-like UID

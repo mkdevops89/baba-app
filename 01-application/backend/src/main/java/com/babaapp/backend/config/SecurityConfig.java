@@ -27,7 +27,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/api/auth/**", "/api/products/**", "/products/**", "/api/cart/**",
                                 "/api/orders/**",
-                                "/actuator/health")
+                                "/actuator/health", "/actuator/prometheus")
                         .permitAll() // Phase 01 demo endpoints
                         .anyRequest().authenticated());
         return http.build();
