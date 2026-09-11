@@ -21,6 +21,11 @@ spec:
       targetRevision: main
       ref: values
 
+    # Deploy Baba App-specific Prometheus resources such as ServiceMonitors.
+    - repoURL: https://github.com/mkdevops89/baba-app.git
+      targetRevision: main
+      path: 06-gitops/observability/prometheus
+
   destination:
     server: https://kubernetes.default.svc
     namespace: observability
