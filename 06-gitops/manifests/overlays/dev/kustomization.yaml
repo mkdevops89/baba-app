@@ -10,7 +10,7 @@ namespace: baba-app
 images:
   - name: baba-app-backend
     newName: 406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-backend
-    digest: sha256:88f9c5203ea301c780029f7b9a62d3c0777d4d037ed7738093777b723d2a7a74
+    digest: sha256:51bfdfe66d976bba95e72bd1197f1f4c7303f8f990b6325f50962e93a0e11b63
 
   - name: baba-app-frontend
     newName: 406312601212.dkr.ecr.us-east-1.amazonaws.com/baba-app-dev-frontend
