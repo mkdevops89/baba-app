@@ -26,5 +26,5 @@ roleRef:
   name: baba-alloy-log-reader
 subjects:
   - kind: ServiceAccount
-    name: baba-alloy
+    name: baba-app-alloy
     namespace: observability
