@@ -191,19 +191,18 @@ prometheusOperator:
     # Prepare admission webhook prerequisites before the normal sync.
     annotations:
       argocd.argoproj.io/hook: PreSync
-      argocd.argoproj.io/sync-wave: "-2"
       argocd.argoproj.io/hook-delete-policy: HookSucceeded
 
     # Ensure the webhook configurations exist before the CA patch job runs.
     mutatingWebhookConfiguration:
       annotations:
         argocd.argoproj.io/hook: PreSync
-        argocd.argoproj.io/sync-wave: "-1"
+        argocd.argoproj.io/sync-wave: "1"
 
     validatingWebhookConfiguration:
       annotations:
         argocd.argoproj.io/hook: PreSync
-        argocd.argoproj.io/sync-wave: "-1"
+        argocd.argoproj.io/sync-wave: "1"
 
     patch:
       # Enable the webhook certificate patch process.
@@ -213,7 +212,7 @@ prometheusOperator:
 
       annotations:
         argocd.argoproj.io/hook: PreSync
-        argocd.argoproj.io/sync-wave: "0"
+        argocd.argoproj.io/sync-wave: "2"
         argocd.argoproj.io/hook-delete-policy: HookSucceeded
 
 # -----------------------------------------------------------------------------
