@@ -1,0 +1,30 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: baba-alloy-log-reader
+rules:
+  # Alloy only discovers Pod metadata.
+  # Container log contents are read from the node's read-only /var/log mount,
+  # so pods/log, Nodes, metrics, Secrets, and monitoring CRDs are unnecessary.
+  - apiGroups:
+      - ""
+    resources:
+      - pods
+    verbs:
+      - get
+      - list
+      - watch
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: baba-alloy-log-reader
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: baba-alloy-log-reader
+subjects:
+  - kind: ServiceAccount
+    name: baba-alloy
+    namespace: observability

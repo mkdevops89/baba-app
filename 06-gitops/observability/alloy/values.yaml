@@ -1,0 +1,117 @@
+# Baba App Grafana Alloy configuration for Kubernetes log collection.
+#
+# Design goals:
+# - Run one Alloy pod per EKS node using a DaemonSet.
+# - Read Kubernetes container logs from the host's /var/log path.
+# - Enrich logs with Kubernetes metadata for namespace/pod/container filtering.
+# - Send logs only to the internal Loki service.
+# - Keep resource usage small for the two-node t3.medium development cluster.
+# - Preserve the chart's hardened non-root security defaults.
+
+alloy:
+  # Create the Alloy configuration as a Helm-managed ConfigMap.
+  configMap:
+    create: true
+    content: |-
+      discovery.kubernetes "pods" {
+        role = "pod"
+      }
+
+      discovery.relabel "pod_logs" {
+        targets = discovery.kubernetes.pods.targets
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_node_name"]
+          regex         = sys.env("K8S_NODE_NAME")
+          action        = "keep"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_namespace"]
+          target_label  = "namespace"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_name"]
+          target_label  = "pod"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_container_name"]
+          target_label  = "container"
+        }
+
+        rule {
+          source_labels = ["__meta_kubernetes_pod_label_app_kubernetes_io_name"]
+          target_label  = "app"
+        }
+
+        rule {
+          source_labels = [
+            "__meta_kubernetes_pod_uid",
+            "__meta_kubernetes_pod_container_name",
+          ]
+          separator    = "/"
+          target_label = "__path__"
+          replacement  = "/var/log/pods/*$1/*$2/*.log"
+        }
+      }
+
+      loki.source.file "kubernetes_pods" {
+        targets    = discovery.relabel.pod_logs.output
+        forward_to = [loki.process.kubernetes_pods.receiver]
+      }
+
+      loki.process "kubernetes_pods" {
+        forward_to = [loki.write.baba_loki.receiver]
+
+        stage.cri {}
+
+        stage.label_drop {
+          values = ["filename"]
+        }
+      }
+
+      loki.write "baba_loki" {
+        endpoint {
+          url = "http://baba-loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+        }
+      }
+
+  # Harden the main Alloy container.
+  securityContext:
+    allowPrivilegeEscalation: false
+    capabilities:
+      drop:
+        - ALL
+    readOnlyRootFilesystem: true
+    runAsNonRoot: true
+    runAsUser: 65534
+    runAsGroup: 65534
+    seccompProfile:
+      type: RuntimeDefault
+
+  # Mount host Kubernetes log files into each Alloy pod.
+  mounts:
+    varlog: true
+    dockercontainers: false
+
+  # Keep Alloy lightweight on development worker nodes.
+  resources:
+    requests:
+      cpu: 50m
+      memory: 128Mi
+    limits:
+      cpu: 200m
+      memory: 256Mi
+
+  # Disable anonymous usage reporting for the portfolio environment.
+  enableReporting: false
+
+# Least-privilege Kubernetes discovery permissions.
+rbac:
+  create: false
+
+controller:
+  # One Alloy pod per Kubernetes node provides node-local log collection.
+  type: daemonset
