@@ -1,3 +1,10 @@
+# Grant the non-root Alloy process supplemental membership in the
+# root-owned log file group so it can traverse and read /var/log/pods
+# without running as UID 0.
+global:
+  podSecurityContext:
+    supplementalGroups:
+    - 0
 # Baba App Grafana Alloy configuration for Kubernetes log collection.
 #
 # Design goals:
@@ -7,7 +14,6 @@
 # - Send logs only to the internal Loki service.
 # - Keep resource usage small for the two-node t3.medium development cluster.
 # - Preserve the chart's hardened non-root security defaults.
-
 alloy:
   # Create the Alloy configuration as a Helm-managed ConfigMap.
   configMap:
