@@ -96,6 +96,13 @@ alloy:
     varlog: true
     dockercontainers: false
 
+    # Alloy requires a writable storage path for runtime state.
+    # Mount only /tmp/alloy as writable while keeping the container
+    # root filesystem read-only.
+    extra:
+      - name: alloy-storage
+        mountPath: /tmp/alloy
+
   # Keep Alloy lightweight on development worker nodes.
   resources:
     requests:
@@ -115,3 +122,8 @@ rbac:
 controller:
   # One Alloy pod per Kubernetes node provides node-local log collection.
   type: daemonset
+
+  volumes:
+    extra:
+      - name: alloy-storage
+        emptyDir: {}
