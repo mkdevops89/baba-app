@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: baba-app-loki
+  namespace: argocd
+
+spec:
+  project: observability
+
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: observability
+
+  # Pin the Loki Helm chart while sourcing environment-specific values
+  # from the Baba App Git repository.
+  sources:
+    - repoURL: https://grafana-community.github.io/helm-charts
+      chart: loki
+      targetRevision: 18.13.0
+      helm:
+        valueFiles:
+          - $values/06-gitops/observability/loki/values.yaml
+
+    - repoURL: https://github.com/mkdevops89/baba-app.git
+      targetRevision: main
+      ref: values
+
+  # Git remains the source of truth. Argo CD automatically repairs drift
+  # and removes resources that are deleted from the declared configuration.
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+
+    syncOptions:
+      - CreateNamespace=false
+      - ServerSideApply=true

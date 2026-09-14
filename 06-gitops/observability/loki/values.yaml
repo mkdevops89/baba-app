@@ -1,0 +1,104 @@
+# Baba App Loki configuration for the development EKS environment.
+#
+# Design goals:
+# - Monolithic Loki for a small development cluster.
+# - One replica to fit the current two-node EKS footprint.
+# - Internal-only access through ClusterIP services.
+# - Ephemeral storage to avoid unnecessary EBS/PVC cost in development.
+# - Seven-day log retention to prevent unbounded growth.
+# - Resource limits sized conservatively for t3.medium worker nodes.
+
+deploymentMode: Monolithic
+
+loki:
+  # Authentication is disabled because Loki is not exposed publicly.
+  # Access remains inside the Kubernetes cluster through ClusterIP services.
+  auth_enabled: false
+
+  # Use Loki's built-in test schema because this development deployment
+  # uses ephemeral filesystem storage and is not intended for durable logs.
+  useTestSchema: true
+
+  commonConfig:
+    # A single Loki replica cannot satisfy the chart default replication factor
+    # of 3. Keep this aligned with singleBinary.replicas.
+    replication_factor: 1
+
+  # Use local filesystem storage for this development deployment.
+  # Production deployments should use durable object storage such as S3.
+  storage:
+    type: filesystem
+    filesystem:
+      chunks_directory: /var/loki/chunks
+      rules_directory: /var/loki/rules
+
+  limits_config:
+    # Retain development logs for seven days.
+    retention_period: 168h
+
+    # Reject excessively old samples and keep query behavior bounded.
+    reject_old_samples: true
+    reject_old_samples_max_age: 168h
+
+  # Enable compactor retention processing for TSDB/file-based storage.
+  compactor:
+    retention_enabled: true
+    delete_request_store: filesystem
+
+singleBinary:
+  # One monolithic Loki instance is sufficient for this development cluster.
+  replicas: 1
+
+  service:
+    # Keep Loki reachable only inside the Kubernetes cluster.
+    type: ClusterIP
+
+  resources:
+    requests:
+      cpu: 100m
+      memory: 256Mi
+    limits:
+      cpu: 500m
+      memory: 512Mi
+
+  persistence:
+    # Development logs are intentionally ephemeral.
+    # No EBS-backed PVC should be provisioned for Phase 08.
+    enabled: false
+
+# Explicitly disable SimpleScalable targets.
+# The chart defaults these components on, but this deployment uses Monolithic mode.
+write:
+  replicas: 0
+
+read:
+  replicas: 0
+
+backend:
+  replicas: 0
+
+# Disable caches to reduce pod count and memory usage on the small EKS cluster.
+chunksCache:
+  enabled: false
+
+resultsCache:
+  enabled: false
+
+# No object-store emulator is required when using filesystem storage.
+minio:
+  enabled: false
+
+# Loki is consumed only inside the cluster.
+gateway:
+  enabled: false
+
+# Disable the chart's Helm test because it requires the Loki Canary.
+# In this development environment, ingestion will be validated through
+# Alloy -> Loki -> Grafana instead of deploying a separate test workload.
+test:
+  enabled: false
+
+# Canary is useful in larger environments but adds another DaemonSet.
+# We will validate ingestion directly through Alloy and Grafana instead.
+lokiCanary:
+  enabled: false
