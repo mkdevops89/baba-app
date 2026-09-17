@@ -1001,30 +1001,90 @@ The implementation intentionally avoids unnecessary telemetry duplication.
 
 # Alerting Validation
 
-Prometheus Alertmanager is deployed with an internal `ClusterIP` service and a development-safe receiver configuration.
+Prometheus Alertmanager is deployed with an internal `ClusterIP` service and a development-safe `null` receiver.
 
-Alert rules are available through the observability stack.
+A controlled end-to-end alert test was completed using the existing `KubePodNotReady` rule.
 
-Before Phase 08 is declared fully closed, at least one controlled alert condition should be tested if this has not already been completed.
+## Test Condition
 
-Suitable tests include:
-
-- temporarily scaling a workload below its expected replica count
-- controlled backend restart
-- short-lived availability failure
-- safe threshold simulation
-
-Validation evidence should capture:
+A temporary namespace and intentionally unschedulable Pod were created:
 
 ```text
-Alert rule
-Trigger condition
-Pending/Firing state
-Receiver behavior
-Recovery to normal
+namespace: phase08-alert-test
+pod: phase08-pending-test
 ```
 
-If an alert test is intentionally deferred, that decision should be documented explicitly rather than represented as completed.
+The Pod used a node selector that did not match either EKS worker node, causing it to remain safely in `Pending` without disrupting Baba App.
+
+Scheduler validation confirmed:
+
+```text
+0/2 nodes are available: 2 node(s) didn't match Pod's node affinity/selector
+```
+
+## Prometheus Alert Transition
+
+The `KubePodNotReady` rule was observed through the Prometheus API.
+
+Initial state:
+
+```text
+pending
+```
+
+After the configured 15-minute `for:` duration:
+
+```text
+firing
+```
+
+Validated labels included:
+
+```text
+alertname=KubePodNotReady
+namespace=phase08-alert-test
+pod=phase08-pending-test
+severity=warning
+```
+
+## Alertmanager Validation
+
+Alertmanager received the firing alert and reported:
+
+```text
+state=active
+receiver=null
+severity=warning
+```
+
+The `null` receiver is intentional for the development environment. This validates routing into Alertmanager without sending an external notification.
+
+## Recovery Validation
+
+The temporary namespace was deleted:
+
+```bash
+kubectl delete namespace phase08-alert-test
+```
+
+After the next evaluation cycle:
+
+- Prometheus returned no active `KubePodNotReady` alert for the test Pod
+- Alertmanager returned no active matching alert
+
+This validates the complete lifecycle:
+
+```text
+Pending workload
+→ Prometheus alert Pending
+→ Prometheus alert Firing
+→ Alertmanager Active
+→ Test cleanup
+→ Prometheus Resolved
+→ Alertmanager Resolved
+```
+
+Status: **Passed**
 
 ---
 
@@ -1045,12 +1105,14 @@ Phase 08 is technically validated when:
 - troubleshooting evidence is documented
 - the Prometheus CR anomaly is documented accurately
 - the Spring-generated credential finding is remediated and deployment-validated
-- at least one alert is tested or explicitly documented as deferred
+- at least one controlled alert is tested end to end
 - final documentation reflects the implemented state
 
 ---
 
 # Current Phase Status
+
+**Phase 08 Status: COMPLETE**
 
 ## Completed
 
@@ -1073,14 +1135,19 @@ Phase 08 is technically validated when:
 - Spring credential code remediation implemented locally
 - Maven validation passed
 
-## Pending Final Closure Items
+## Final Closure Status
 
-1. Deploy the Spring credential-remediation backend image.
-2. Confirm new backend startup logs do not contain `generated security password`.
-3. Confirm new Loki entries do not contain that credential.
-4. Confirm or document the controlled alert test status.
+All Phase 08 closure items have been validated:
 
-After those items are validated, Phase 08 can be formally marked complete.
+- Spring credential remediation deployed and validated
+- new backend logs contain no generated Spring security password
+- Loki returns no new matching credential entries
+- controlled `KubePodNotReady` alert test completed
+- Prometheus Pending → Firing transition validated
+- Alertmanager receipt validated
+- alert recovery and cleanup validated
+
+Status: **COMPLETE**
 
 ---
 
