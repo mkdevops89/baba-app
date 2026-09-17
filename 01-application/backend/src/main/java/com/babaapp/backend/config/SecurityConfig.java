@@ -5,6 +5,8 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
+import org.springframework.security.core.userdetails.UserDetailsService;
+import org.springframework.security.provisioning.InMemoryUserDetailsManager;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
@@ -31,6 +33,26 @@ public class SecurityConfig {
                         .permitAll() // Phase 01 demo endpoints
                         .anyRequest().authenticated());
         return http.build();
+    }
+
+    /**
+     * Defines an intentionally empty local user store.
+     *
+     * Security rationale:
+     * Spring Boot creates a default development user when no authentication
+     * provider or UserDetailsService is configured. That behavior generates
+     * a temporary password and writes it to application logs, which can then
+     * be collected by centralized logging systems such as Loki.
+     *
+     * Baba App does not use local Spring users at this stage. Providing an
+     * empty UserDetailsService disables the default generated credential
+     * while preserving authentication requirements for protected endpoints.
+     * A production identity provider will replace this mechanism in the
+     * identity phase.
+     */
+    @Bean
+    public UserDetailsService userDetailsService() {
+        return new InMemoryUserDetailsManager();
     }
 
     @Bean

@@ -1,165 +1,165 @@
-# Phase 08 — Observability Validation
+# Phase 08 — Observability and Centralized Logging Validation
 
 ## Overview
 
-This document defines the validation approach for Phase 08 — Observability.
+This document records the completed validation for Phase 08 — Observability for the Baba App platform.
 
-Validation should demonstrate that the Baba App observability platform is functioning as designed across metrics, dashboards, logging, alerting, security controls, and GitOps deployment.
+Phase 08 demonstrates that the observability platform is functioning across metrics, dashboards, centralized logging, GitOps deployment, security controls, bounded resource usage, and reproducibility.
 
-The final evidence should show not only that observability components are running, but that they provide useful operational visibility and can be reproduced from version-controlled configuration.
+The implemented stack includes:
+
+- Prometheus
+- Grafana
+- Alertmanager
+- kube-state-metrics
+- node-exporter
+- Prometheus Operator
+- Grafana Loki
+- Grafana Alloy
+- Spring Boot Actuator / Micrometer
+- Argo CD GitOps delivery
+- AWS-native telemetry through CloudWatch
+
+The final evidence demonstrates not only that the components are running, but that they provide useful operational visibility and can be reproduced from version-controlled configuration.
+
+---
 
 ## Validation Objectives
 
-Phase 08 validation should confirm:
+Phase 08 validation confirms that:
 
 - observability components deploy successfully through GitOps
 - Prometheus collects Kubernetes and application metrics
 - Grafana queries Prometheus successfully
 - dashboards display live platform and workload data
+- application metrics are available through Spring Boot Actuator / Micrometer
 - AWS-native telemetry remains available through CloudWatch
-- operational logs are centralized and searchable
-- alerting rules evaluate successfully
-- at least one alert path is tested
+- operational logs are centralized through Grafana Alloy and Loki
+- logs are searchable by namespace, workload, pod, and container metadata
 - observability services are not unintentionally exposed publicly
 - credentials and secrets are not committed to Git
 - Kubernetes service accounts and RBAC follow least-privilege principles
-- security scans pass or findings are documented
+- security scans pass or findings are explicitly documented
 - retention and resource settings are bounded
 - the environment can be reproduced from Git
+- significant troubleshooting decisions are documented
 
-## Pre-Deployment Validation
+---
 
-Before deploying observability components, validate repository configuration.
+## Repository Structure
 
-### Repository Structure
-
-Expected Phase 08 structure:
+Primary Phase 08 documentation:
 
 ```text
 08-observability/
 ├── README.md
-├── docs/
-│   ├── architecture.md
-│   ├── security-controls.md
-│   └── validation.md
-└── scripts/
+└── docs/
+    ├── architecture.md
+    ├── security-controls.md
+    └── validation.md
 ```
 
-GitOps resources added later should remain clearly separated from Baba App application workloads.
+GitOps resources are maintained separately under:
 
-### Git Validation
+```text
+06-gitops/
+├── argocd/
+│   ├── applications/
+│   └── projects/
+└── observability/
+    ├── prometheus/
+    ├── loki/
+    └── alloy/
+```
 
-Run:
+---
+
+## Git Validation
+
+Repository validation includes:
 
 ```bash
 git status
 git diff --check
 ```
 
-Expected result:
+Expected results:
 
 - no whitespace errors
 - no unintended files
-- no plaintext credentials
+- no plaintext credentials committed to Git
 - only expected Phase 08 changes
 
-### Secret Scanning
+Existing Gitleaks validation remains enabled.
 
-Existing Gitleaks validation should continue to pass.
-
-No observability credentials should appear in:
-
-```text
-values.yaml
-Kubernetes manifests
-GitHub workflows
-Terraform files
-README files
-documentation
-```
+---
 
 ## GitOps Validation
 
-Observability resources should be delivered through the existing GitOps model.
+Observability resources are delivered through Argo CD.
 
-Validation should confirm:
+Validated applications include:
 
-- Argo CD recognizes the observability application or resources
-- synchronization completes successfully
-- desired state matches Git
-- self-healing behavior remains available where configured
-- observability resources are created only in approved namespaces
+```text
+baba-app-observability
+baba-app-loki
+baba-app-alloy
+```
 
-Expected namespace:
+Expected deployment namespace:
 
 ```text
 observability
 ```
 
-Validation commands may include:
+Validation confirmed:
+
+- Argo CD recognizes the observability applications
+- synchronization completes successfully
+- automated prune and self-heal remain enabled where configured
+- desired state is sourced from Git
+- observability resources are constrained to the approved namespace
+- Helm chart versions are explicitly pinned
+- server-side apply is used where required for large CRDs
+
+Representative commands:
 
 ```bash
-kubectl get namespace observability
+argocd app list
+argocd app get baba-app-observability
+argocd app get baba-app-loki
+argocd app get baba-app-alloy
 kubectl get all -n observability
 ```
 
-Argo CD status should report:
-
-```text
-Synced
-Healthy
-```
-
-where applicable.
+---
 
 ## Prometheus Validation
 
-Prometheus should be deployed and collecting metrics.
+Prometheus is deployed through `kube-prometheus-stack`.
 
-### Pod Health
+Validated components include:
 
-Validate:
+- Prometheus
+- Alertmanager
+- kube-state-metrics
+- node-exporter
+- Prometheus Operator
+- ServiceMonitors
+- PrometheusRules
+
+Representative validation:
 
 ```bash
 kubectl get pods -n observability
-```
-
-Prometheus-related pods should be:
-
-```text
-Running
-Ready
-```
-
-### Service Validation
-
-Validate Prometheus service exposure:
-
-```bash
 kubectl get svc -n observability
 ```
 
-Prometheus should not use an unintended public `LoadBalancer`.
+Prometheus is exposed internally through `ClusterIP`.
 
-Preferred exposure:
+No unintended public `LoadBalancer` or `NodePort` service is used.
 
-```text
-ClusterIP
-```
-
-### Metrics Collection
-
-Prometheus should successfully scrape Kubernetes telemetry.
-
-Validation targets may include:
-
-- Kubernetes API metrics
-- kube-state-metrics
-- node metrics
-- pod metrics
-- application metrics where configured
-
-Representative Prometheus queries may include:
+Representative Prometheus queries include:
 
 ```promql
 up
@@ -181,344 +181,597 @@ Expected result:
 
 - active metric series are returned
 - expected monitoring targets report healthy scrape status
+- application and Kubernetes telemetry are available to Grafana
+
+---
+
+## Application Metrics Validation
+
+The Baba App backend exposes metrics through Spring Boot Actuator and Micrometer.
+
+Validated metrics path:
+
+```text
+Spring Boot Actuator / Micrometer
+        ↓
+ServiceMonitor
+        ↓
+Prometheus
+        ↓
+Grafana
+```
+
+The application metrics endpoint is exposed internally on the management port.
+
+Validated endpoints include:
+
+```text
+/actuator/health
+/actuator/prometheus
+```
+
+The Baba App Grafana dashboard includes:
+
+- backend replica availability
+- application uptime
+- HTTP request rate
+- HTTP 5xx error rate
+- request activity by URI and method
+- p95 request latency
+- JVM heap usage
+- process CPU utilization
+
+The dashboard was visually validated with live application data.
+
+---
 
 ## Grafana Validation
 
-Grafana should provide authenticated dashboard access and successfully query the Prometheus datasource.
+Grafana provides authenticated dashboard access.
 
-### Pod Health
+Validated controls include:
 
-Validate:
+- anonymous access disabled
+- authenticated administrative access required
+- credentials supplied through Kubernetes Secret
+- credentials not committed to Git
+- service exposure limited to `ClusterIP`
+- local administrative access performed through port forwarding
+- Prometheus configured as the default datasource
+- Loki configured as an additional datasource
 
-```bash
-kubectl get pods -n observability
-```
-
-Grafana should report:
-
-```text
-Running
-Ready
-```
-
-### Network Exposure
-
-Validate:
+Representative access command:
 
 ```bash
-kubectl get svc -n observability
+kubectl port-forward   -n observability   svc/baba-observability-grafana   3001:80
 ```
 
-Grafana should not be exposed through an unintended public service.
+Grafana successfully queries both Prometheus and Loki.
 
-If administrative access uses port forwarding, validate through:
-
-```bash
-kubectl port-forward -n observability svc/<grafana-service> 3000:80
-```
-
-The exact service name will be documented after implementation.
-
-### Authentication
-
-Validation should confirm:
-
-- anonymous access is disabled
-- authentication is required
-- administrative credentials are not stored in Git
-
-### Datasource
-
-Grafana should successfully query Prometheus.
-
-Validation should confirm that the Prometheus datasource reports a successful connection.
+---
 
 ## Dashboard Validation
 
-Phase 08 should provide operational dashboards with live data.
+Phase 08 provides operational dashboard coverage across:
 
-### Platform Dashboard
-
-Validate visibility into:
-
-- node availability
 - cluster health
+- node availability
 - CPU utilization
 - memory utilization
-- workload health
-
-### Kubernetes Dashboard
-
-Validate visibility into:
-
 - namespaces
 - deployments
 - pods
 - replica availability
 - pod restarts
-- resource utilization
+- resource requests and limits
+- Baba App application metrics
 
-### Application Dashboard
+The custom Baba App dashboard is provisioned through GitOps.
 
-Where application metrics are available, validate:
-
-- backend availability
-- frontend availability
-- request activity
-- errors
-- application health
-
-Screenshots or exported dashboard metadata may be retained as portfolio evidence where useful.
+---
 
 ## AWS Observability Validation
 
-Existing AWS-native telemetry should remain functional.
+AWS-native telemetry remains available alongside the in-cluster observability stack.
 
-Validation may include:
+Relevant telemetry includes:
+
+- EKS control-plane logs where enabled
+- VPC Flow Logs
+- CloudWatch log groups
+- infrastructure service logs
+
+Representative command:
 
 ```bash
 aws logs describe-log-groups --region us-east-1
 ```
 
-Relevant telemetry should include existing platform logs such as:
+AWS telemetry remains managed through infrastructure-as-code where applicable.
 
-- EKS control-plane logs when EKS is provisioned
-- VPC Flow Logs
-- infrastructure service logs
+---
 
-CloudWatch configuration should remain managed through infrastructure-as-code where applicable.
+# Centralized Logging Validation
 
-## Centralized Logging Validation
+## Logging Architecture
 
-Once the Phase 08 logging component is implemented, validation should demonstrate that workload logs can be queried centrally.
+Validated centralized logging flow:
 
-Validation should confirm:
+```text
+Kubernetes Pods
+      ↓
+/var/log/pods
+      ↓
+Grafana Alloy DaemonSet
+      ↓
+CRI processing + Kubernetes labels
+      ↓
+Grafana Loki
+      ↓
+Grafana Explore / LogQL
+```
 
-- logs from Baba App workloads are collected
-- logs include useful workload metadata
-- logs can be filtered by namespace or workload
-- sensitive values are not intentionally logged
-- retention is bounded
-- logging failure does not cause application failure
+Grafana Alloy runs as a DaemonSet so each EKS worker node has a node-local log collector.
 
-Representative test:
+Loki runs in development-oriented monolithic mode with bounded retention.
 
-1. Generate normal application traffic.
-2. Query the centralized logging platform.
-3. Locate the corresponding backend or frontend log events.
-4. Confirm timestamps and workload metadata.
-5. Verify no credentials or secrets appear in the event.
+---
 
-## Alerting Validation
+## Loki Validation
 
-Alert rules should be evaluated and at least one controlled alert should be tested.
+Loki is deployed internally through the Kubernetes Service:
 
-Potential test conditions include:
+```text
+baba-app-loki
+```
 
-- temporarily scaling a deployment below expected replicas
-- controlled workload restart
-- short-lived application availability failure
-- safe resource-threshold simulation
+The Loki service uses `ClusterIP`.
 
-The test should avoid destructive or production-impacting behavior.
-
-Validation evidence should include:
-
-- alert rule name
-- trigger condition
-- alert state transition
-- receiver or notification behavior where configured
-- recovery to normal state
-
-## Kubernetes Security Validation
-
-Observability Kubernetes resources should be reviewed for security posture.
-
-Validation should include:
-
-- dedicated namespace
-- dedicated service accounts
-- least-privilege RBAC
-- no unnecessary `cluster-admin`
-- no unintended public services
-- workload security contexts where supported
-- resource requests and limits
-- restricted secret handling
-
-Commands may include:
+Readiness validation:
 
 ```bash
-kubectl get serviceaccounts -n observability
-kubectl get roles,rolebindings -n observability
-kubectl get clusterroles,clusterrolebindings | grep -i observ
-kubectl get svc -n observability
+kubectl port-forward   -n observability   svc/baba-app-loki   3100:3100
 ```
-
-## Security Scanning
-
-The infrastructure-security workflow should validate observability resources.
-
-Expected tools include:
-
-```text
-Checkov
-Trivy
-Gitleaks
-```
-
-Findings should be handled through one of the following:
-
-```text
-Remediate
-Document accepted risk
-Document deferred control
-```
-
-Security checks should not be disabled merely to obtain a passing workflow.
-
-## Resource Validation
-
-Observability components should not consume unbounded cluster resources.
-
-Validate:
 
 ```bash
-kubectl top pods -n observability
-kubectl top nodes
+curl -s http://localhost:3100/ready
 ```
 
-where metrics support is available.
-
-Review:
-
-- CPU requests
-- memory requests
-- CPU limits
-- memory limits
-- storage use
-- metrics retention
-- log retention
-
-The development implementation should remain appropriately sized for the Baba App environment.
-
-## Failure Isolation Validation
-
-Observability should not become a synchronous dependency of Baba App.
-
-A controlled test may temporarily stop or scale down a visualization component such as Grafana.
-
-Expected result:
+Expected:
 
 ```text
-Baba App remains available.
+ready
 ```
 
-Prometheus or logging interruptions should affect visibility, not application functionality.
+Label API validation:
 
-## Reproducibility Validation
+```bash
+curl -s http://localhost:3100/loki/api/v1/labels
+```
 
-The observability platform should be recoverable from version-controlled configuration.
-
-Validation should confirm:
-
-- no required manual cluster configuration exists outside documented bootstrap steps
-- GitOps resources are stored in Git
-- configuration changes are reviewable
-- component versions are explicit
-- secrets are supplied separately from source control
-
-## Cost Validation
-
-Phase 08 should record the cost-impacting decisions introduced by observability.
-
-Review:
-
-- additional EKS workload consumption
-- persistent storage if introduced
-- CloudWatch ingestion
-- CloudWatch retention
-- log duplication
-- metrics retention
-
-The implementation should avoid unnecessary telemetry duplication.
-
-## Commercial Product Validation Considerations
-
-The future commercial implementation should support multiple observability levels without requiring the full Baba App stack.
-
-Validation should eventually support configurations such as:
+Validated labels include:
 
 ```text
-Basic:
-AWS-native metrics and alarms
-
-Standard:
-AWS dashboards and centralized logs
-
-Advanced:
-Prometheus, Grafana, Kubernetes metrics, centralized logging, and advanced alerting
+app
+container
+namespace
+pod
+service_name
+stream
 ```
 
-Each tier should maintain baseline security requirements.
-
-## Troubleshooting Evidence
-
-During implementation, meaningful failures and remediations should be documented.
-
-For each significant issue, capture:
+Namespace values were confirmed to include:
 
 ```text
-Symptom
-Root cause
-Security or operational impact
-Remediation
-Validation after remediation
+argocd
+baba-app
+kube-system
+observability
 ```
 
-This evidence will support both portfolio documentation and interview preparation.
+---
 
-## Final Validation Criteria
+## Baba App Log Validation
 
-Phase 08 can be considered complete when:
+A fresh backend pod was deliberately created to produce deterministic startup logs.
 
-- observability components are deployed through GitOps
-- Prometheus collects expected metrics
-- Grafana dashboards contain live data
-- AWS telemetry remains accessible
-- operational logs are centralized
-- at least one alert is tested
-- observability endpoints are securely controlled
-- secrets are excluded from Git
-- security scans pass or findings are documented
-- resource and retention settings are bounded
-- troubleshooting evidence is captured
-- final documentation reflects the implemented state
+Representative query:
 
-## Phase Status
+```bash
+curl -G -s   "http://localhost:3100/loki/api/v1/query_range"   --data-urlencode 'query={namespace="baba-app"}'   --data-urlencode 'limit=20'
+```
 
-## Live Validation and Troubleshooting Results
+The query returned real Baba App backend entries with labels including:
 
-### Fresh EKS Reprovision Validation
+```text
+app=baba-app-backend
+container=backend
+namespace=baba-app
+pod=<backend-pod-name>
+service_name=baba-app-backend
+stream=stdout
+```
 
-The Phase 08 observability stack was validated after completely destroying and reprovisioning the EKS cluster.
+Grafana Explore also successfully rendered Baba App backend log lines using:
 
-The following components were restored successfully through Terraform, Argo CD, Helm, and GitOps:
+```logql
+{namespace="baba-app"}
+```
 
-- Prometheus
-- Grafana
-- Alertmanager
-- kube-state-metrics
-- node-exporter
-- Prometheus Operator
-- Kubernetes ServiceMonitors and PrometheusRules
+and:
 
-This fresh-cluster deployment confirmed that the Phase 08 configuration is reproducible and not dependent on leftover Kubernetes state.
+```logql
+{namespace="baba-app", container="backend"}
+```
 
-### Server-Side Apply for Prometheus CRDs
+This proves the full application log path is operational.
 
-The initial observability deployment encountered issues applying large Prometheus Operator CustomResourceDefinitions through Argo CD.
+---
 
-The Argo CD Application was updated with:
+# Centralized Logging Troubleshooting Resolved
+
+## 1. Alloy Read-Only Root Filesystem
+
+### Symptom
+
+Alloy entered `CrashLoopBackOff` with an error similar to:
+
+```text
+failed to create remotecfg service: mkdir /tmp/alloy: read-only file system
+```
+
+### Root Cause
+
+The container was hardened with:
+
+```text
+readOnlyRootFilesystem: true
+```
+
+but Alloy required writable runtime space under `/tmp/alloy`.
+
+### Remediation
+
+Added a scoped `emptyDir` volume mounted at:
+
+```text
+/tmp/alloy
+```
+
+The container root filesystem remained read-only.
+
+### Security Outcome
+
+The fix preserved container hardening while granting only the minimum required writable path.
+
+---
+
+## 2. Alloy ServiceAccount RBAC Mismatch
+
+### Symptom
+
+Alloy could not list Kubernetes Pods.
+
+### Root Cause
+
+The custom ClusterRoleBinding referenced the wrong ServiceAccount name.
+
+Expected chart-created ServiceAccount:
+
+```text
+baba-app-alloy
+```
+
+### Remediation
+
+Updated the custom ClusterRoleBinding to reference the correct ServiceAccount.
+
+### Validation
+
+```bash
+kubectl auth can-i list pods   --as=system:serviceaccount:observability:baba-app-alloy   --all-namespaces
+```
+
+Expected:
+
+```text
+yes
+```
+
+---
+
+## 3. EKS Pod Log Filesystem Permissions
+
+### Symptom
+
+The non-root Alloy container could not access `/var/log/pods`.
+
+### Root Cause
+
+EKS node pod-log directories and files were owned by `root:root` with restrictive permissions.
+
+### Security Constraint
+
+Alloy was intentionally configured to run as:
+
+```text
+UID: 65534
+GID: 65534
+runAsNonRoot: true
+allowPrivilegeEscalation: false
+readOnlyRootFilesystem: true
+capabilities: drop ALL
+seccomp: RuntimeDefault
+```
+
+### Remediation
+
+Added:
+
+```yaml
+supplementalGroups:
+  - 0
+```
+
+at Pod security-context level.
+
+### Security Outcome
+
+Alloy remained non-root while receiving only the group-level access necessary to read node-local pod logs.
+
+---
+
+## 4. Kubernetes Log Path Capture
+
+### Symptom
+
+Alloy generated invalid paths with extra path segments or double slashes.
+
+### Root Cause
+
+Alloy relabeling joined:
+
+```text
+pod UID
+container name
+```
+
+using:
+
+```text
+separator = "/"
+```
+
+The combined value was captured as `$1`.
+
+### Remediation
+
+Corrected the replacement path to:
+
+```text
+/var/log/pods/*$1/*.log
+```
+
+### Validation
+
+Rendered Helm configuration confirmed the expected path.
+
+---
+
+## 5. Alloy File Matching
+
+### Symptom
+
+Alloy attempted to `stat()` wildcard paths directly and reported:
+
+```text
+no such file or directory
+```
+
+### Root Cause
+
+`loki.source.file` was receiving glob-style `__path__` values without built-in file matching enabled.
+
+### Remediation
+
+Enabled:
+
+```alloy
+file_match {
+  enabled     = true
+  sync_period = "10s"
+}
+```
+
+### Validation
+
+Recent Alloy logs no longer reported wildcard path errors.
+
+---
+
+## 6. Incorrect Alloy Loki Service Endpoint
+
+### Symptom
+
+Alloy reported:
+
+```text
+lookup baba-loki.observability.svc.cluster.local: no such host
+```
+
+### Root Cause
+
+The configured endpoint referenced:
+
+```text
+baba-loki
+```
+
+while the actual Kubernetes Service was:
+
+```text
+baba-app-loki
+```
+
+### Remediation
+
+Updated the endpoint to:
+
+```text
+http://baba-app-loki.observability.svc.cluster.local:3100/loki/api/v1/push
+```
+
+### Validation
+
+DNS errors stopped and Loki began receiving log streams.
+
+---
+
+## 7. Incorrect Grafana Loki Datasource Endpoint
+
+### Symptom
+
+Grafana could not query Loki even though direct Loki API requests worked.
+
+### Root Cause
+
+Grafana's datasource still referenced the old nonexistent `baba-loki` service.
+
+### Remediation
+
+Updated the Grafana Loki datasource URL to:
+
+```text
+http://baba-app-loki.observability.svc.cluster.local:3100
+```
+
+### Validation
+
+Grafana Explore successfully displayed Baba App logs.
+
+---
+
+## 8. Deterministic Application Log Generation
+
+### Problem
+
+The logging pipeline was healthy, but existing Baba App Pods were idle and produced no recent log lines.
+
+### Validation Method
+
+Deleted one backend replica so Kubernetes recreated it.
+
+The new backend generated deterministic Spring Boot startup events.
+
+### Result
+
+The logs appeared through:
+
+```text
+kubectl logs
+      ↓
+Alloy
+      ↓
+Loki API
+      ↓
+Grafana Explore
+```
+
+This provided end-to-end proof of centralized application logging.
+
+---
+
+# Security Finding — Generated Spring Security Credential
+
+## Finding
+
+During centralized logging validation, the Baba App backend emitted an automatically generated Spring Security development password to stdout.
+
+The logging pipeline correctly collected the application output and stored the credential in Loki.
+
+This is an application-security finding, not a Loki or Alloy defect.
+
+## Risk
+
+Centralized logging increases the number of systems and users that may have access to application output.
+
+A credential written to stdout can therefore become visible to:
+
+- log administrators
+- operators
+- incident responders
+- automated log-processing systems
+- downstream monitoring integrations
+
+The exposed value must be treated as compromised.
+
+## Root Cause
+
+The backend had a custom `SecurityFilterChain` but no explicit local `UserDetailsService`.
+
+Spring Boot therefore auto-configured its default development user and generated a temporary password.
+
+## Remediation
+
+The backend security configuration was updated with an intentionally empty local user store:
+
+```java
+@Bean
+public UserDetailsService userDetailsService() {
+    return new InMemoryUserDetailsManager();
+}
+```
+
+This prevents Spring Boot from generating the default development credential while preserving existing protected-route behavior.
+
+## Local Validation
+
+Backend validation completed successfully:
+
+```text
+mvn clean test
+BUILD SUCCESS
+```
+
+## Deployment Validation Status
+
+Final remediation validation remains pending deployment of the updated backend image.
+
+After deployment, validate:
+
+```bash
+kubectl logs -n baba-app   -l app.kubernetes.io/name=baba-app-backend   --since=5m   | grep -i 'generated security password'
+```
+
+Expected:
+
+```text
+<no output>
+```
+
+Then validate Loki:
+
+```logql
+{namespace="baba-app"} |= "generated security password"
+```
+
+Expected for newly generated logs:
+
+```text
+no matching entries
+```
+
+Historical entries may remain visible until Loki retention removes them.
+
+---
+
+# Prometheus Operator Validation
+
+## Server-Side Apply for CRDs
+
+The initial deployment encountered issues applying large Prometheus Operator CRDs through Argo CD.
+
+The observability Application was configured with:
 
 ```yaml
 syncOptions:
@@ -526,9 +779,11 @@ syncOptions:
   - ServerSideApply=true
 ```
 
-Server-side apply allowed Argo CD to successfully manage the full Prometheus Operator CRD set.
+This enabled Argo CD to manage the Prometheus Operator CRD set successfully.
 
-### Grafana Memory Exhaustion
+---
+
+## Grafana Memory Exhaustion
 
 Grafana initially restarted with:
 
@@ -537,7 +792,7 @@ Reason: OOMKilled
 Exit Code: 137
 ```
 
-The Grafana memory allocation was increased to:
+Resources were adjusted to:
 
 ```yaml
 resources:
@@ -549,69 +804,296 @@ resources:
     memory: 512Mi
 ```
 
-After the GitOps rollout, the replacement Grafana pod remained stable with a restart count of zero.
+After rollout, Grafana remained stable.
 
-### Admission Webhook TLS Remediation
+---
 
-Prometheus Operator logs showed repeated TLS errors:
+## Admission Webhook TLS Remediation
+
+Prometheus Operator logs initially showed:
 
 ```text
 remote error: tls: bad certificate
 ```
 
-Both the MutatingWebhookConfiguration and ValidatingWebhookConfiguration initially contained empty `caBundle` fields.
+The webhook configurations initially had empty `caBundle` fields.
 
-The Prometheus Operator admission webhook patch process was configured to run as an Argo CD PreSync hook.
+The certificate patch process was ordered through Argo CD hooks.
 
 After remediation:
 
-- Mutating webhook `caBundle` was populated.
-- Validating webhook `caBundle` was populated.
-- Admission certificate patch jobs completed successfully.
-- Repeated `bad certificate` errors stopped.
+- mutating webhook `caBundle` populated
+- validating webhook `caBundle` populated
+- certificate patch jobs completed
+- repeated TLS errors stopped
 
-This restored trusted TLS communication for Prometheus Operator admission webhooks.
+This restored trusted communication for Prometheus Operator admission webhooks.
 
-### Prometheus Status Reconciliation Anomaly
+---
 
-The Prometheus workload is operational, but the Prometheus custom resource continues to report:
+## Prometheus Status Reconciliation Anomaly
+
+The Prometheus workload is operational, but the Prometheus custom resource can report:
 
 ```text
 Available=False
 Reason=StatefulSetNotFound
 ```
 
-The operator reports:
+even while the generated StatefulSet and Pod are healthy.
 
-```text
-shard 0: statefulset observability/prometheus-baba-observability-prometheus not found
+Live validation confirmed:
+
+- StatefulSet exists
+- StatefulSet reports `1/1 Ready`
+- owner reference matches the Prometheus CR
+- Prometheus readiness endpoint responds
+- Prometheus API queries return metric results
+- Grafana successfully queries Prometheus
+- Kubernetes dashboards display live data
+
+This condition was reproduced after a clean rebuild.
+
+The remaining Argo CD `Degraded` state is classified as a Prometheus Operator status-reconciliation anomaly rather than a monitoring service outage.
+
+Healthy workloads were intentionally not deleted solely to force a cosmetic health state.
+
+---
+
+# Kubernetes Security Validation
+
+Validated observability controls include:
+
+- dedicated `observability` namespace
+- dedicated ServiceAccounts
+- custom least-privilege Alloy RBAC
+- no unnecessary `cluster-admin`
+- no public Grafana, Prometheus, Alloy, or Loki service
+- hardened Alloy security context
+- resource requests and limits
+- credentials supplied separately from source control
+- GitOps-managed configuration
+
+Representative validation:
+
+```bash
+kubectl get serviceaccounts -n observability
+kubectl get roles,rolebindings -n observability
+kubectl get clusterroles,clusterrolebindings | grep -i observ
+kubectl get svc -n observability
 ```
 
-However, live validation confirmed:
+---
 
-- `prometheus-baba-observability-prometheus` exists.
-- The StatefulSet reports `1/1 Ready`.
-- The StatefulSet labels match the Prometheus CR selector.
-- The StatefulSet owner reference UID matches the Prometheus CR UID.
-- Prometheus responds successfully to its readiness endpoint.
-- Prometheus API queries return successful metric results.
-- Grafana successfully queries the Prometheus datasource.
-- Kubernetes dashboards display live cluster, node, namespace, pod, CPU, and memory metrics.
+# Security Scanning
 
-The remaining Argo CD `Degraded` state is therefore documented as a Prometheus Operator status-reconciliation anomaly rather than a monitoring service outage.
+Security validation continues through the CI/CD pipeline.
 
-Healthy resources were intentionally not deleted solely to force a cosmetic health-state change.
+Relevant tools include:
 
-## Observability Validation Outcome
+```text
+Gitleaks
+Checkov
+Trivy
+CodeQL
+```
 
-Phase 08 successfully provides operational visibility across:
+Findings are handled through:
+
+```text
+Remediate
+Document accepted risk
+Document deferred control
+Time-bound exception with reassessment
+```
+
+Security gates are not disabled merely to obtain a passing build.
+
+Runtime-image CVEs with no vendor fix are handled through package-specific, time-bound Trivy exceptions with expiration dates.
+
+---
+
+# Resource and Retention Validation
+
+The Phase 08 development environment uses bounded resource and retention settings.
+
+Validated controls include:
+
+- Prometheus retention: 7 days
+- Prometheus retention size: bounded
+- Loki retention: 7 days
+- Grafana resource requests and limits
+- Prometheus resource requests and limits
+- Alloy resource requests and limits
+- no unnecessary persistent storage for the development implementation
+- no public observability endpoints
+
+Representative commands:
+
+```bash
+kubectl top pods -n observability
+kubectl top nodes
+```
+
+where metrics support is available.
+
+---
+
+# Failure Isolation
+
+Observability is not a synchronous dependency of Baba App.
+
+Expected architecture behavior:
+
+```text
+Observability failure
+        ↓
+Reduced visibility
+        ↓
+Application continues serving traffic
+```
+
+Grafana, Prometheus, Loki, or Alloy failure should not directly cause Baba App application failure.
+
+---
+
+# Reproducibility Validation
+
+Phase 08 was validated after a complete EKS destruction and reprovision.
+
+The following were restored successfully from infrastructure-as-code and GitOps configuration:
+
+- EKS observability namespace
+- Prometheus
+- Grafana
+- Alertmanager
+- kube-state-metrics
+- node-exporter
+- Prometheus Operator
+- ServiceMonitors
+- PrometheusRules
+- Loki
+- Alloy
+- Grafana datasources
+- Baba App application dashboard
+
+This confirms the implementation is reproducible and is not dependent on leftover cluster state.
+
+Secrets remain supplied separately from Git.
+
+---
+
+# Cost Validation
+
+Phase 08 cost-related decisions include:
+
+- bounded metrics retention
+- bounded log retention
+- no unnecessary persistent development storage
+- no public load balancers for observability tools
+- small development-oriented Loki deployment
+- controlled CPU and memory requests/limits
+- use of existing EKS worker capacity
+
+The implementation intentionally avoids unnecessary telemetry duplication.
+
+---
+
+# Alerting Validation
+
+Prometheus Alertmanager is deployed with an internal `ClusterIP` service and a development-safe receiver configuration.
+
+Alert rules are available through the observability stack.
+
+Before Phase 08 is declared fully closed, at least one controlled alert condition should be tested if this has not already been completed.
+
+Suitable tests include:
+
+- temporarily scaling a workload below its expected replica count
+- controlled backend restart
+- short-lived availability failure
+- safe threshold simulation
+
+Validation evidence should capture:
+
+```text
+Alert rule
+Trigger condition
+Pending/Firing state
+Receiver behavior
+Recovery to normal
+```
+
+If an alert test is intentionally deferred, that decision should be documented explicitly rather than represented as completed.
+
+---
+
+# Phase 08 Acceptance Criteria
+
+Phase 08 is technically validated when:
+
+- observability components deploy through GitOps
+- Prometheus collects expected Kubernetes metrics
+- Baba App application metrics reach Prometheus
+- Grafana dashboards contain live data
+- AWS telemetry remains accessible
+- operational logs are centralized through Alloy and Loki
+- Baba App logs are queryable in Grafana
+- observability endpoints remain privately exposed
+- credentials are excluded from Git
+- resource and retention settings are bounded
+- troubleshooting evidence is documented
+- the Prometheus CR anomaly is documented accurately
+- the Spring-generated credential finding is remediated and deployment-validated
+- at least one alert is tested or explicitly documented as deferred
+- final documentation reflects the implemented state
+
+---
+
+# Current Phase Status
+
+## Completed
+
+- Prometheus deployment
+- Grafana deployment
+- Alertmanager deployment
+- Kubernetes metrics collection
+- Baba App application metrics
+- custom Grafana application dashboard
+- Loki centralized log storage
+- Alloy node-level collection
+- Grafana Loki datasource
+- end-to-end Baba App log ingestion
+- fresh-cluster reproducibility test
+- TLS webhook remediation
+- Grafana OOM remediation
+- Prometheus status-anomaly investigation
+- centralized logging troubleshooting and validation
+- Spring credential exposure identified
+- Spring credential code remediation implemented locally
+- Maven validation passed
+
+## Pending Final Closure Items
+
+1. Deploy the Spring credential-remediation backend image.
+2. Confirm new backend startup logs do not contain `generated security password`.
+3. Confirm new Loki entries do not contain that credential.
+4. Confirm or document the controlled alert test status.
+
+After those items are validated, Phase 08 can be formally marked complete.
+
+---
+
+# Phase 08 Outcome
+
+Phase 08 provides operational visibility across:
 
 - EKS worker nodes
 - Kubernetes namespaces
 - Pods and containers
 - CPU utilization
 - Memory utilization
-- Resource requests and limits
+- resource requests and limits
 - Kubernetes API server
 - kubelet and cAdvisor
 - kube-state-metrics
@@ -620,7 +1102,9 @@ Phase 08 successfully provides operational visibility across:
 - Grafana
 - Alertmanager
 - Prometheus Operator
+- Baba App backend metrics
+- Kubernetes workload logs
+- Baba App backend logs
+- GitOps reconciliation state
 
-Grafana dashboards successfully provide cluster-level, node-level, and pod-level drill-down capabilities.
-
-Application-specific Baba App metrics are planned as an additional observability enhancement.
+The observability implementation now supports both operational monitoring and security investigation workflows while remaining intentionally sized for the Baba App development environment.
