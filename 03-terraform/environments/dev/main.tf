@@ -48,6 +48,28 @@ module "eks" {
 }
 
 # -----------------------------------------------------------------------------
+# Phase 09 - Workload Identity
+# -----------------------------------------------------------------------------
+# Create application-level IAM identity only while EKS is provisioned.
+# The backend receives narrowly scoped Secrets Manager access through
+# EKS Pod Identity rather than static AWS credentials.
+module "workload_identity" {
+  count = var.enable_eks ? 1 : 0
+
+  source = "../../modules/workload-identity"
+
+  project_name = var.project_name
+  environment  = var.environment
+  cluster_name = module.eks[0].cluster_name
+
+  # Wait for the EKS platform, including the Pod Identity Agent add-on,
+  # before creating application workload identity associations.
+  depends_on = [
+    module.eks
+  ]
+}
+
+# -----------------------------------------------------------------------------
 # CI/CD IAM - GitHub Actions OIDC and ECR publishing
 # -----------------------------------------------------------------------------
 

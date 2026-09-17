@@ -101,6 +101,25 @@ resource "aws_eks_cluster" "this" {
 }
 
 # -----------------------------------------------------------------------------
+# EKS Pod Identity Agent
+# -----------------------------------------------------------------------------
+# Install the AWS-managed Pod Identity Agent so Kubernetes ServiceAccounts can
+# receive short-lived AWS credentials through EKS Pod Identity rather than
+# static access keys or node-level IAM permissions.
+resource "aws_eks_addon" "pod_identity_agent" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "eks-pod-identity-agent"
+
+  depends_on = [
+    aws_eks_cluster.this
+  ]
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-pod-identity-agent"
+  }
+}
+
+# -----------------------------------------------------------------------------
 # EKS administrative access
 # -----------------------------------------------------------------------------
 # Administrative Kubernetes access is managed through the EKS Access API

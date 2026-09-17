@@ -144,6 +144,20 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       "eks:DescribeNodegroup",
       "eks:ListNodegroups",
 
+      # Phase 09 - EKS managed add-on lifecycle.
+      "eks:CreateAddon",
+      "eks:DeleteAddon",
+      "eks:DescribeAddon",
+      "eks:ListAddons",
+      "eks:UpdateAddon",
+
+      # Phase 09 - Pod Identity association lifecycle.
+      "eks:CreatePodIdentityAssociation",
+      "eks:DeletePodIdentityAssociation",
+      "eks:DescribePodIdentityAssociation",
+      "eks:ListPodIdentityAssociations",
+      "eks:UpdatePodIdentityAssociation",
+
       # EKS Access API permissions allow Terraform to manage the approved
       # administrative access entry and its cluster access policy association.
       "eks:CreateAccessEntry",
@@ -209,7 +223,101 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       ]
     }
   }
+  
+  # ---------------------------------------------------------------------------
+  # Phase 09 workload identity IAM lifecycle
+  # ---------------------------------------------------------------------------
+  # Terraform may manage only the backend Pod Identity role created for the
+  # Baba App development workload.
+  statement {
+    sid    = "ManageBackendPodIdentityRole"
+    effect = "Allow"
 
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy",
+      "iam:ListAttachedRolePolicies"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-backend-pod-identity"
+    ]
+  }
+
+  # Terraform may create and remove only the managed policy used by the
+  # backend Pod Identity role.
+  statement {
+    sid    = "ManageBackendPodIdentityPolicy"
+    effect = "Allow"
+
+    actions = [
+      "iam:CreatePolicy",
+      "iam:CreatePolicyVersion",
+      "iam:DeletePolicy",
+      "iam:DeletePolicyVersion",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListPolicyVersions",
+      "iam:SetDefaultPolicyVersion",
+      "iam:TagPolicy",
+      "iam:UntagPolicy"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:policy/${var.project_name}-${var.environment}-backend-secret-read"
+    ]
+  }
+
+    # EKS needs permission to use this exact IAM role when Terraform creates the
+  # Pod Identity association. Restrict PassRole to the Pod Identity service.
+  statement {
+    sid    = "PassBackendPodIdentityRole"
+    effect = "Allow"
+
+    actions = [
+      "iam:PassRole"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-backend-pod-identity"
+    ]
+
+    condition {
+      test     = "StringEquals"
+      variable = "iam:PassedToService"
+
+      values = [
+        "pods.eks.amazonaws.com"
+      ]
+    }
+  }
+
+  # ---------------------------------------------------------------------------
+  # Phase 09 demo secret lifecycle
+  # ---------------------------------------------------------------------------
+  # Limit automation to the Baba App development backend secret namespace.
+  statement {
+    sid    = "ManageBackendDemoSecret"
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:CreateSecret",
+      "secretsmanager:DeleteSecret",
+      "secretsmanager:DescribeSecret",
+      "secretsmanager:TagResource",
+      "secretsmanager:UntagResource"
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:*:*:secret:${var.project_name}/${var.environment}/backend/config-*"
+    ]
+  }
+  
   # ---------------------------------------------------------------------------
   # Read-only infrastructure refresh
   # ---------------------------------------------------------------------------
