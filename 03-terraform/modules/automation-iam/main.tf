@@ -225,6 +225,37 @@ data "aws_iam_policy_document" "infrastructure_automation" {
   }
   
   # ---------------------------------------------------------------------------
+  # Phase 09 human EKS access role lifecycle
+  # ---------------------------------------------------------------------------
+  # Terraform may manage only the three IAM roles used for namespace-scoped
+  # human access to the Baba App EKS cluster.
+  #
+  # These roles are authentication principals only. They do not receive AWS
+  # permissions and are not passed to an AWS service. Kubernetes authorization
+  # is enforced through EKS Access Entries and namespace-scoped RBAC groups.
+  statement {
+    sid    = "ManageHumanEKSAccessRoles"
+    effect = "Allow"
+
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListRolePolicies"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-eks-admin",
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-eks-developer",
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-eks-readonly"
+    ]
+  }
+
+  # ---------------------------------------------------------------------------
   # Phase 09 workload identity IAM lifecycle
   # ---------------------------------------------------------------------------
   # Terraform may manage only the backend Pod Identity role created for the
@@ -273,7 +304,7 @@ data "aws_iam_policy_document" "infrastructure_automation" {
     ]
   }
 
-    # EKS needs permission to use this exact IAM role when Terraform creates the
+  # EKS needs permission to use this exact IAM role when Terraform creates the
   # Pod Identity association. Restrict PassRole to the Pod Identity service.
   statement {
     sid    = "PassBackendPodIdentityRole"

@@ -69,6 +69,28 @@ module "workload_identity" {
   ]
 }
 
+#############################################
+# Phase 09 — Human EKS Access
+#
+# Creates dedicated human IAM roles and maps
+# them into namespace-scoped Kubernetes RBAC
+# groups using EKS Access Entries.
+#############################################
+
+module "human_eks_access" {
+  count = var.enable_eks ? 1 : 0
+
+  source = "../../modules/human-eks-access"
+
+  project_name = var.project_name
+  environment  = var.environment
+  cluster_name = module.eks[0].cluster_name
+
+  depends_on = [
+    module.eks
+  ]
+}
+
 # -----------------------------------------------------------------------------
 # CI/CD IAM - GitHub Actions OIDC and ECR publishing
 # -----------------------------------------------------------------------------
