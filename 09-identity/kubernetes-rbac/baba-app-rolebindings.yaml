@@ -1,0 +1,49 @@
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: baba-app-developers
+  namespace: baba-app
+subjects:
+  # EKS human identities can be mapped into this Kubernetes group through
+  # EKS Access Entries. Permissions therefore follow a reusable group model
+  # rather than being assigned directly to individual users.
+  - kind: Group
+    name: baba-app-developers
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: baba-app-developer
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: baba-app-readonly
+  namespace: baba-app
+subjects:
+  - kind: Group
+    name: baba-app-readonly
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: Role
+  name: baba-app-readonly
+
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: RoleBinding
+metadata:
+  name: baba-app-admins
+  namespace: baba-app
+subjects:
+  - kind: Group
+    name: baba-app-admins
+    apiGroup: rbac.authorization.k8s.io
+roleRef:
+  # Using the built-in Kubernetes admin ClusterRole through a namespace
+  # RoleBinding grants administrative capability only inside baba-app.
+  # It does not grant cluster-wide cluster-admin access.
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: admin

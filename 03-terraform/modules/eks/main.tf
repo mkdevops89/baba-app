@@ -58,7 +58,20 @@ resource "aws_eks_cluster" "this" {
   version  = var.cluster_version
   access_config {
     authentication_mode                         = "API_AND_CONFIG_MAP"
-    bootstrap_cluster_creator_admin_permissions = true
+    # Do not automatically grant the cluster-creating IAM principal Kubernetes
+    # administrator access. Human administrative access is granted explicitly
+    # through a dedicated EKS Access Entry, preventing infrastructure automation
+    # identities from inheriting unnecessary cluster-admin privileges.
+    bootstrap_cluster_creator_admin_permissions = false
+  }
+
+  # AWS treats the bootstrap creator-admin setting as immutable after cluster
+  # creation. Ignore the existing cluster's historical value so improving the
+  # default for future rebuilds does not force replacement of the live cluster.
+  lifecycle {
+    ignore_changes = [
+      access_config[0].bootstrap_cluster_creator_admin_permissions
+    ]
   }
 
   # Export all EKS control-plane log types to CloudWatch for

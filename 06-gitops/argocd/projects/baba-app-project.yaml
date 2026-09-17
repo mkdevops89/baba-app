@@ -22,6 +22,10 @@ spec:
       kind: Deployment
     - group: ""
       kind: Service
+    - group: rbac.authorization.k8s.io
+      kind: Role
+    - group: rbac.authorization.k8s.io
+      kind: RoleBinding
 
   # The Namespace resource is cluster-scoped, so it must be explicitly allowed.
   clusterResourceWhitelist:
