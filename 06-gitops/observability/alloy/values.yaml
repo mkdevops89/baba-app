@@ -59,7 +59,7 @@ alloy:
           ]
           separator    = "/"
           target_label = "__path__"
-          replacement  = "/var/log/pods/*$1/$2/*.log"
+          replacement  = "/var/log/pods/*$1/*.log"
         }
       }
 
