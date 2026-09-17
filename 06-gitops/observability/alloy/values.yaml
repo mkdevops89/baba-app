@@ -85,7 +85,7 @@ alloy:
 
       loki.write "baba_loki" {
         endpoint {
-          url = "http://baba-loki.observability.svc.cluster.local:3100/loki/api/v1/push"
+          url = "http://baba-app-loki.observability.svc.cluster.local:3100/loki/api/v1/push"
         }
       }
 
