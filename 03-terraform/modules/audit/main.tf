@@ -115,6 +115,10 @@ resource "aws_kms_alias" "cloudtrail" {
 # checkov:skip=CKV2_AWS_62:Event notifications are not required for the Phase 09 management-audit use case; alerting and event-driven detection will be implemented in the security-monitoring phase.
 # checkov:skip=CKV_AWS_144:Cross-Region Replication is deferred to the disaster-recovery phase where the destination region, KMS key, replication role, retention, RPO, and recovery design will be implemented together.
 resource "aws_s3_bucket" "cloudtrail" {
+  #checkov:skip=CKV_AWS_18:Dedicated CloudTrail archive bucket; separate S3 server-access logging is deferred to centralized logging design to avoid recursive or duplicate audit logging.
+  #checkov:skip=CKV2_AWS_62:Event notifications are not required for the Phase 09 management-audit use case; alerting and event-driven detection will be implemented in the security-monitoring phase.
+  #checkov:skip=CKV_AWS_144:Cross-Region Replication is deferred to the disaster-recovery phase where destination region, KMS key, replication role, retention, and recovery objectives will be designed together.
+
   bucket = local.bucket_name
 
   tags = {
@@ -297,6 +301,8 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
 # -----------------------------------------------------------------------------
 
 resource "aws_cloudtrail" "management" {
+  #checkov:skip=CKV_AWS_252:SNS delivery is not required for the Phase 09 audit baseline because CloudTrail is integrated with CloudWatch Logs; alerting will be implemented in the security-monitoring phase.
+  
   name                          = local.trail_name
   s3_bucket_name                = aws_s3_bucket.cloudtrail.id
   kms_key_id                    = aws_kms_key.cloudtrail.arn
