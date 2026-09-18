@@ -111,7 +111,9 @@ resource "aws_kms_alias" "cloudtrail" {
 # -----------------------------------------------------------------------------
 # CloudTrail S3 archive
 # -----------------------------------------------------------------------------
-
+# checkov:skip=CKV_AWS_18:Dedicated CloudTrail archive bucket; separate S3 server-access logging is deferred to centralized logging design to avoid recursive/duplicate audit logging.
+# checkov:skip=CKV2_AWS_62:Event notifications are not required for the Phase 09 management-audit use case; alerting and event-driven detection will be implemented in the security-monitoring phase.
+# checkov:skip=CKV_AWS_144:Cross-Region Replication is deferred to the disaster-recovery phase where the destination region, KMS key, replication role, retention, RPO, and recovery design will be implemented together.
 resource "aws_s3_bucket" "cloudtrail" {
   bucket = local.bucket_name
 
@@ -169,6 +171,10 @@ resource "aws_s3_bucket_lifecycle_configuration" "cloudtrail" {
 
     expiration {
       days = 365
+    }
+
+    abort_incomplete_multipart_upload {
+      days_after_initiation = 7
     }
 
     noncurrent_version_expiration {
@@ -299,16 +305,77 @@ resource "aws_cloudtrail" "management" {
   enable_log_file_validation    = true
   enable_logging                = true
 
+  cloud_watch_logs_group_arn = "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+  cloud_watch_logs_role_arn  = aws_iam_role.cloudtrail_cloudwatch.arn
+
   event_selector {
     include_management_events = true
     read_write_type           = "All"
   }
 
   depends_on = [
-    aws_s3_bucket_policy.cloudtrail
+    aws_s3_bucket_policy.cloudtrail,
+    aws_iam_role_policy.cloudtrail_cloudwatch
   ]
 
   tags = {
     Name = local.trail_name
   }
+}
+
+# -----------------------------------------------------------------------------
+# CloudTrail CloudWatch Logs integration
+# -----------------------------------------------------------------------------
+
+resource "aws_cloudwatch_log_group" "cloudtrail" {
+  name              = "/aws/cloudtrail/${local.trail_name}"
+  retention_in_days = 365
+
+  tags = {
+    Name = "${local.trail_name}-logs"
+  }
+}
+
+data "aws_iam_policy_document" "cloudtrail_cloudwatch_assume_role" {
+  statement {
+    sid     = "AllowCloudTrailAssumeRole"
+    effect  = "Allow"
+    actions = ["sts:AssumeRole"]
+
+    principals {
+      type        = "Service"
+      identifiers = ["cloudtrail.amazonaws.com"]
+    }
+  }
+}
+
+resource "aws_iam_role" "cloudtrail_cloudwatch" {
+  name               = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch"
+  assume_role_policy = data.aws_iam_policy_document.cloudtrail_cloudwatch_assume_role.json
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch"
+  }
+}
+
+data "aws_iam_policy_document" "cloudtrail_cloudwatch" {
+  statement {
+    sid    = "WriteCloudTrailLogs"
+    effect = "Allow"
+
+    actions = [
+      "logs:CreateLogStream",
+      "logs:PutLogEvents"
+    ]
+
+    resources = [
+      "${aws_cloudwatch_log_group.cloudtrail.arn}:*"
+    ]
+  }
+}
+
+resource "aws_iam_role_policy" "cloudtrail_cloudwatch" {
+  name   = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch"
+  role   = aws_iam_role.cloudtrail_cloudwatch.id
+  policy = data.aws_iam_policy_document.cloudtrail_cloudwatch.json
 }
