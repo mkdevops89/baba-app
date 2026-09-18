@@ -34,6 +34,21 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 }
 
 # -----------------------------------------------------------------------------
+# EKS control-plane log retention
+# -----------------------------------------------------------------------------
+# EKS exports API, audit, authenticator, controller-manager, and scheduler logs
+# to this CloudWatch log group. Manage it explicitly so security telemetry has a
+# defined lifecycle instead of being retained indefinitely.
+resource "aws_cloudwatch_log_group" "cluster" {
+  name              = "/aws/eks/${var.project_name}-${var.environment}-eks/cluster"
+  retention_in_days = 365
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-eks-control-plane"
+  }
+}
+
+# -----------------------------------------------------------------------------
 # EKS Cluster
 # -----------------------------------------------------------------------------
 # Creates the managed Kubernetes control plane.
@@ -92,7 +107,8 @@ resource "aws_eks_cluster" "this" {
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.cluster_policy
+    aws_iam_role_policy_attachment.cluster_policy,
+    aws_cloudwatch_log_group.cluster
   ]
 
   tags = {

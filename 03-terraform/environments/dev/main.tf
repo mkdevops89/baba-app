@@ -137,3 +137,16 @@ module "automation_iam" {
 
   terraform_state_kms_key_arn = "arn:aws:kms:us-east-1:406312601212:key/6ebf8690-f47b-47d9-be76-8f76a9f70bc2"
 }
+
+# -----------------------------------------------------------------------------
+# Phase 09 - Identity and privileged-access auditability
+# -----------------------------------------------------------------------------
+# CloudTrail remains active independently of the development EKS lifecycle so
+# administrative and identity changes remain auditable even while the cluster
+# is intentionally stopped/destroyed for cost control.
+module "audit" {
+  source = "../../modules/audit"
+
+  project_name = var.project_name
+  environment  = var.environment
+}
