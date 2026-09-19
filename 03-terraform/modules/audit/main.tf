@@ -36,7 +36,38 @@ data "aws_iam_policy_document" "cloudtrail_kms" {
 
     resources = ["*"]
   }
+  
+  statement {
+    sid    = "AllowCloudWatchLogsEncryption"
+    effect = "Allow"
 
+    principals {
+      type = "Service"
+      identifiers = [
+        "logs.${data.aws_region.current.region}.amazonaws.com"
+      ]
+    }
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "ArnEquals"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+
+      values = [
+        "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/cloudtrail/${local.trail_name}"
+      ]
+    }
+  }
+  
   statement {
     sid    = "AllowCloudTrailEncryption"
     effect = "Allow"
@@ -302,7 +333,7 @@ resource "aws_s3_bucket_policy" "cloudtrail" {
 
 resource "aws_cloudtrail" "management" {
   #checkov:skip=CKV_AWS_252:SNS delivery is not required for the Phase 09 audit baseline because CloudTrail is integrated with CloudWatch Logs; alerting will be implemented in the security-monitoring phase.
-  
+
   name                          = local.trail_name
   s3_bucket_name                = aws_s3_bucket.cloudtrail.id
   kms_key_id                    = aws_kms_key.cloudtrail.arn
@@ -336,6 +367,7 @@ resource "aws_cloudtrail" "management" {
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   name              = "/aws/cloudtrail/${local.trail_name}"
   retention_in_days = 365
+  kms_key_id         = aws_kms_key.cloudtrail.arn
 
   tags = {
     Name = "${local.trail_name}-logs"

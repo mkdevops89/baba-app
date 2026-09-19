@@ -39,9 +39,78 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 # EKS exports API, audit, authenticator, controller-manager, and scheduler logs
 # to this CloudWatch log group. Manage it explicitly so security telemetry has a
 # defined lifecycle instead of being retained indefinitely.
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_iam_policy_document" "eks_logs_kms" {
+  statement {
+    sid    = "EnableAccountAdministration"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudWatchLogsEncryption"
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "logs.${data.aws_region.current.region}.amazonaws.com"
+      ]
+    }
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "ArnEquals"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+
+      values = [
+        "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/eks/${var.project_name}-${var.environment}-eks/cluster"
+      ]
+    }
+  }
+}
+
+resource "aws_kms_key" "eks_logs" {
+  description             = "KMS key for Baba App EKS control-plane logs"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.eks_logs_kms.json
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-eks-control-plane-logs"
+  }
+}
+
+resource "aws_kms_alias" "eks_logs" {
+  name          = "alias/${var.project_name}-${var.environment}-eks-control-plane-logs"
+  target_key_id = aws_kms_key.eks_logs.key_id
+}
+
 resource "aws_cloudwatch_log_group" "cluster" {
   name              = "/aws/eks/${var.project_name}-${var.environment}-eks/cluster"
   retention_in_days = 365
+  kms_key_id         = aws_kms_key.eks_logs.arn
 
   tags = {
     Name = "${var.project_name}-${var.environment}-eks-control-plane"

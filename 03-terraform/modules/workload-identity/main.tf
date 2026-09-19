@@ -3,8 +3,76 @@
 # -----------------------------------------------------------------------------
 # This secret exists only to demonstrate a realistic workload-identity pattern.
 # No plaintext secret value is stored in Terraform or Git.
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_iam_policy_document" "backend_secret_kms" {
+  statement {
+    sid    = "EnableAccountAdministration"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowSecretsManagerUse"
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "secretsmanager.${data.aws_region.current.region}.amazonaws.com"
+      ]
+    }
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "StringEquals"
+      variable = "kms:ViaService"
+      values = [
+        "secretsmanager.${data.aws_region.current.region}.amazonaws.com"
+      ]
+    }
+  }
+}
+
+resource "aws_kms_key" "backend_secret" {
+  description             = "KMS key for Baba App backend Secrets Manager configuration"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.backend_secret_kms.json
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-backend-secret"
+  }
+}
+
+resource "aws_kms_alias" "backend_secret" {
+  name          = "alias/${var.project_name}-${var.environment}-backend-secret"
+  target_key_id = aws_kms_key.backend_secret.key_id
+}
+
 resource "aws_secretsmanager_secret" "backend_config" {
   name = "${var.project_name}/${var.environment}/backend/config"
+  kms_key_id = aws_kms_key.backend_secret.arn
 
   description = "Demo backend configuration used to validate EKS Pod Identity."
   
@@ -64,6 +132,19 @@ data "aws_iam_policy_document" "backend_secret_read" {
 
     resources = [
       aws_secretsmanager_secret.backend_config.arn
+    ]
+  }
+
+  statement {
+    sid    = "DecryptBackendConfigSecret"
+    effect = "Allow"
+
+    actions = [
+      "kms:Decrypt"
+    ]
+
+    resources = [
+      aws_kms_key.backend_secret.arn
     ]
   }
 }
