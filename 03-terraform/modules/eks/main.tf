@@ -34,6 +34,90 @@ resource "aws_iam_role_policy_attachment" "cluster_policy" {
 }
 
 # -----------------------------------------------------------------------------
+# EKS control-plane log retention
+# -----------------------------------------------------------------------------
+# EKS exports API, audit, authenticator, controller-manager, and scheduler logs
+# to this CloudWatch log group. Manage it explicitly so security telemetry has a
+# defined lifecycle instead of being retained indefinitely.
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
+data "aws_iam_policy_document" "eks_logs_kms" {
+  statement {
+    sid    = "EnableAccountAdministration"
+    effect = "Allow"
+
+    principals {
+      type = "AWS"
+      identifiers = [
+        "arn:aws:iam::${data.aws_caller_identity.current.account_id}:root"
+      ]
+    }
+
+    actions   = ["kms:*"]
+    resources = ["*"]
+  }
+
+  statement {
+    sid    = "AllowCloudWatchLogsEncryption"
+    effect = "Allow"
+
+    principals {
+      type = "Service"
+      identifiers = [
+        "logs.${data.aws_region.current.region}.amazonaws.com"
+      ]
+    }
+
+    actions = [
+      "kms:Encrypt",
+      "kms:Decrypt",
+      "kms:ReEncrypt*",
+      "kms:GenerateDataKey*",
+      "kms:DescribeKey"
+    ]
+
+    resources = ["*"]
+
+    condition {
+      test     = "ArnEquals"
+      variable = "kms:EncryptionContext:aws:logs:arn"
+
+      values = [
+        "arn:aws:logs:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:log-group:/aws/eks/${var.project_name}-${var.environment}-eks/cluster"
+      ]
+    }
+  }
+}
+
+resource "aws_kms_key" "eks_logs" {
+  description             = "KMS key for Baba App EKS control-plane logs"
+  deletion_window_in_days = 30
+  enable_key_rotation     = true
+  policy                  = data.aws_iam_policy_document.eks_logs_kms.json
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-eks-control-plane-logs"
+  }
+}
+
+resource "aws_kms_alias" "eks_logs" {
+  name          = "alias/${var.project_name}-${var.environment}-eks-control-plane-logs"
+  target_key_id = aws_kms_key.eks_logs.key_id
+}
+
+resource "aws_cloudwatch_log_group" "cluster" {
+  name              = "/aws/eks/${var.project_name}-${var.environment}-eks/cluster"
+  retention_in_days = 365
+  kms_key_id         = aws_kms_key.eks_logs.arn
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-eks-control-plane"
+  }
+}
+
+# -----------------------------------------------------------------------------
 # EKS Cluster
 # -----------------------------------------------------------------------------
 # Creates the managed Kubernetes control plane.
@@ -58,7 +142,20 @@ resource "aws_eks_cluster" "this" {
   version  = var.cluster_version
   access_config {
     authentication_mode                         = "API_AND_CONFIG_MAP"
-    bootstrap_cluster_creator_admin_permissions = true
+    # Do not automatically grant the cluster-creating IAM principal Kubernetes
+    # administrator access. Human administrative access is granted explicitly
+    # through a dedicated EKS Access Entry, preventing infrastructure automation
+    # identities from inheriting unnecessary cluster-admin privileges.
+    bootstrap_cluster_creator_admin_permissions = false
+  }
+
+  # AWS treats the bootstrap creator-admin setting as immutable after cluster
+  # creation. Ignore the existing cluster's historical value so improving the
+  # default for future rebuilds does not force replacement of the live cluster.
+  lifecycle {
+    ignore_changes = [
+      access_config[0].bootstrap_cluster_creator_admin_permissions
+    ]
   }
 
   # Export all EKS control-plane log types to CloudWatch for
@@ -79,11 +176,31 @@ resource "aws_eks_cluster" "this" {
   }
 
   depends_on = [
-    aws_iam_role_policy_attachment.cluster_policy
+    aws_iam_role_policy_attachment.cluster_policy,
+    aws_cloudwatch_log_group.cluster
   ]
 
   tags = {
     Name = "${var.project_name}-${var.environment}-eks"
+  }
+}
+
+# -----------------------------------------------------------------------------
+# EKS Pod Identity Agent
+# -----------------------------------------------------------------------------
+# Install the AWS-managed Pod Identity Agent so Kubernetes ServiceAccounts can
+# receive short-lived AWS credentials through EKS Pod Identity rather than
+# static access keys or node-level IAM permissions.
+resource "aws_eks_addon" "pod_identity_agent" {
+  cluster_name = aws_eks_cluster.this.name
+  addon_name   = "eks-pod-identity-agent"
+
+  depends_on = [
+    aws_eks_cluster.this
+  ]
+
+  tags = {
+    Name = "${var.project_name}-${var.environment}-pod-identity-agent"
   }
 }
 

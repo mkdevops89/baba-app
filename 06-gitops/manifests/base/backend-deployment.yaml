@@ -16,6 +16,7 @@ spec:
         app.kubernetes.io/name: baba-app-backend
         app.kubernetes.io/part-of: baba-app
     spec:
+      serviceAccountName: baba-app-backend
       automountServiceAccountToken: false
 
       securityContext:

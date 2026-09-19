@@ -48,6 +48,50 @@ module "eks" {
 }
 
 # -----------------------------------------------------------------------------
+# Phase 09 - Workload Identity
+# -----------------------------------------------------------------------------
+# Create application-level IAM identity only while EKS is provisioned.
+# The backend receives narrowly scoped Secrets Manager access through
+# EKS Pod Identity rather than static AWS credentials.
+module "workload_identity" {
+  count = var.enable_eks ? 1 : 0
+
+  source = "../../modules/workload-identity"
+
+  project_name = var.project_name
+  environment  = var.environment
+  cluster_name = module.eks[0].cluster_name
+
+  # Wait for the EKS platform, including the Pod Identity Agent add-on,
+  # before creating application workload identity associations.
+  depends_on = [
+    module.eks
+  ]
+}
+
+#############################################
+# Phase 09 — Human EKS Access
+#
+# Creates dedicated human IAM roles and maps
+# them into namespace-scoped Kubernetes RBAC
+# groups using EKS Access Entries.
+#############################################
+
+module "human_eks_access" {
+  count = var.enable_eks ? 1 : 0
+
+  source = "../../modules/human-eks-access"
+
+  project_name = var.project_name
+  environment  = var.environment
+  cluster_name = module.eks[0].cluster_name
+
+  depends_on = [
+    module.eks
+  ]
+}
+
+# -----------------------------------------------------------------------------
 # CI/CD IAM - GitHub Actions OIDC and ECR publishing
 # -----------------------------------------------------------------------------
 
@@ -92,4 +136,17 @@ module "automation_iam" {
   terraform_state_key        = "environments/dev/terraform.tfstate"
 
   terraform_state_kms_key_arn = "arn:aws:kms:us-east-1:406312601212:key/6ebf8690-f47b-47d9-be76-8f76a9f70bc2"
+}
+
+# -----------------------------------------------------------------------------
+# Phase 09 - Identity and privileged-access auditability
+# -----------------------------------------------------------------------------
+# CloudTrail remains active independently of the development EKS lifecycle so
+# administrative and identity changes remain auditable even while the cluster
+# is intentionally stopped/destroyed for cost control.
+module "audit" {
+  source = "../../modules/audit"
+
+  project_name = var.project_name
+  environment  = var.environment
 }
