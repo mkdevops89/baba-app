@@ -71,6 +71,8 @@ resource "aws_kms_alias" "backend_secret" {
 }
 
 resource "aws_secretsmanager_secret" "backend_config" {
+  #checkov:skip=CKV2_AWS_57:This is a static development configuration secret used to validate EKS Pod Identity; automatic credential rotation is not applicable to this demo value.
+
   name = "${var.project_name}/${var.environment}/backend/config"
   kms_key_id = aws_kms_key.backend_secret.arn
 
