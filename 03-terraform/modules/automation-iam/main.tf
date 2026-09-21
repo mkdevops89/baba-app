@@ -223,7 +223,7 @@ data "aws_iam_policy_document" "infrastructure_automation" {
       ]
     }
   }
-  
+
   # ---------------------------------------------------------------------------
   # Phase 09 human EKS access role lifecycle
   # ---------------------------------------------------------------------------
@@ -350,7 +350,7 @@ data "aws_iam_policy_document" "infrastructure_automation" {
     ]
   }
 
-    # ---------------------------------------------------------------------------
+  # ---------------------------------------------------------------------------
   # Read-only infrastructure refresh
   # ---------------------------------------------------------------------------
   # Terraform refreshes the existing long-lived foundation before planning.

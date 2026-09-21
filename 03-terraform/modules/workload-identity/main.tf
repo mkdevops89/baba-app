@@ -73,16 +73,16 @@ resource "aws_kms_alias" "backend_secret" {
 resource "aws_secretsmanager_secret" "backend_config" {
   #checkov:skip=CKV2_AWS_57:This is a static development configuration secret used to validate EKS Pod Identity; automatic credential rotation is not applicable to this demo value.
 
-  name = "${var.project_name}/${var.environment}/backend/config"
+  name       = "${var.project_name}/${var.environment}/backend/config"
   kms_key_id = aws_kms_key.backend_secret.arn
 
   description = "Demo backend configuration used to validate EKS Pod Identity."
-  
+
   # This is a disposable development secret. Immediate deletion keeps the
   # cluster lifecycle reproducible and prevents a scheduled-deletion secret
   # from blocking recreation with the same name.
   recovery_window_in_days = 0
-  
+
   tags = {
     Name = "${var.project_name}-${var.environment}-backend-config"
   }

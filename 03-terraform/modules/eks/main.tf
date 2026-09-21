@@ -110,7 +110,7 @@ resource "aws_kms_alias" "eks_logs" {
 resource "aws_cloudwatch_log_group" "cluster" {
   name              = "/aws/eks/${var.project_name}-${var.environment}-eks/cluster"
   retention_in_days = 365
-  kms_key_id         = aws_kms_key.eks_logs.arn
+  kms_key_id        = aws_kms_key.eks_logs.arn
 
   tags = {
     Name = "${var.project_name}-${var.environment}-eks-control-plane"
@@ -141,7 +141,7 @@ resource "aws_eks_cluster" "this" {
   role_arn = aws_iam_role.cluster.arn
   version  = var.cluster_version
   access_config {
-    authentication_mode                         = "API_AND_CONFIG_MAP"
+    authentication_mode = "API_AND_CONFIG_MAP"
     # Do not automatically grant the cluster-creating IAM principal Kubernetes
     # administrator access. Human administrative access is granted explicitly
     # through a dedicated EKS Access Entry, preventing infrastructure automation

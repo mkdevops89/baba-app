@@ -36,7 +36,7 @@ data "aws_iam_policy_document" "cloudtrail_kms" {
 
     resources = ["*"]
   }
-  
+
   statement {
     sid    = "AllowCloudWatchLogsEncryption"
     effect = "Allow"
@@ -67,7 +67,7 @@ data "aws_iam_policy_document" "cloudtrail_kms" {
       ]
     }
   }
-  
+
   statement {
     sid    = "AllowCloudTrailEncryption"
     effect = "Allow"
@@ -283,7 +283,7 @@ data "aws_iam_policy_document" "cloudtrail_bucket" {
         "arn:aws:cloudtrail:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:trail/${local.trail_name}"
       ]
     }
-    
+
     condition {
       test     = "StringEquals"
       variable = "s3:x-amz-acl"
@@ -367,7 +367,7 @@ resource "aws_cloudtrail" "management" {
 resource "aws_cloudwatch_log_group" "cloudtrail" {
   name              = "/aws/cloudtrail/${local.trail_name}"
   retention_in_days = 365
-  kms_key_id         = aws_kms_key.cloudtrail.arn
+  kms_key_id        = aws_kms_key.cloudtrail.arn
 
   tags = {
     Name = "${local.trail_name}-logs"
