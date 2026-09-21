@@ -461,6 +461,7 @@ data "aws_iam_policy_document" "phase09_security_automation" {
       "s3:ListBucket",
       "s3:GetAccelerateConfiguration",
       "s3:GetLifecycleConfiguration",
+      "s3:GetReplicationConfiguration",
       "s3:GetBucket*",
       "s3:PutBucket*",
       "s3:DeleteBucket*"
