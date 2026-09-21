@@ -407,6 +407,23 @@ data "aws_iam_policy_document" "phase09_security_automation" {
     ]
   }
 
+  # Terraform checks for attached instance profiles before deleting IAM roles.
+  statement {
+    sid    = "ReadDeletableRoleInstanceProfiles"
+    effect = "Allow"
+
+    actions = [
+      "iam:ListInstanceProfilesForRole"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-eks-admin",
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-eks-developer",
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-eks-readonly",
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-backend-pod-identity"
+    ]
+  }
+
   # ---------------------------------------------------------------------------
   # Phase 09 CloudTrail audit lifecycle
   # ---------------------------------------------------------------------------
