@@ -211,6 +211,7 @@ jobs:
         run: |
           terraform plan \
             -input=false \
+            -var="enable_eks=${TF_VAR_enable_eks}" \
             -out=phase07-lifecycle.tfplan
 
       # Produce a human-readable representation for the workflow evidence.
