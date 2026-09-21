@@ -393,6 +393,20 @@ data "aws_iam_policy_document" "infrastructure_automation" {
 # because the primary infrastructure automation policy reached the AWS
 # managed-policy size quota.
 data "aws_iam_policy_document" "phase09_security_automation" {
+  # Terraform reads the secret resource policy during state refresh.
+  statement {
+    sid    = "ReadBackendDemoSecretPolicy"
+    effect = "Allow"
+
+    actions = [
+      "secretsmanager:GetResourcePolicy"
+    ]
+
+    resources = [
+      "arn:aws:secretsmanager:*:*:secret:${var.project_name}/${var.environment}/backend/config-*"
+    ]
+  }
+
   # ---------------------------------------------------------------------------
   # Phase 09 CloudTrail audit lifecycle
   # ---------------------------------------------------------------------------
@@ -445,6 +459,7 @@ data "aws_iam_policy_document" "phase09_security_automation" {
       "s3:CreateBucket",
       "s3:DeleteBucket",
       "s3:ListBucket",
+      "s3:GetAccelerateConfiguration",
       "s3:GetBucket*",
       "s3:PutBucket*",
       "s3:DeleteBucket*"
