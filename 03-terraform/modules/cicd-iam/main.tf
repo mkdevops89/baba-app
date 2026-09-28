@@ -8,6 +8,10 @@ resource "aws_iam_openid_connect_provider" "github_actions" {
   client_id_list = [
     "sts.amazonaws.com"
   ]
+
+  tags = {
+    Phase = var.phase
+  }
 }
 
 # -----------------------------------------------------------------------------
@@ -61,7 +65,8 @@ resource "aws_iam_role" "github_actions_cicd" {
     Name        = "${var.project_name}-${var.environment}-github-actions-cicd"
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    ManagedBy   = "Terraform"
+    Phase       = var.phase
   }
 }
 
@@ -109,7 +114,8 @@ resource "aws_iam_policy" "ecr_publish" {
   tags = {
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    ManagedBy   = "Terraform"
+    Phase       = var.phase
   }
 }
 

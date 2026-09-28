@@ -57,6 +57,7 @@ resource "aws_iam_role" "eks_namespace_admin" {
     Name        = "${var.project_name}-${var.environment}-eks-admin"
     Environment = var.environment
     Purpose     = "EKS namespace administration"
+    Phase       = var.phase
   }
 }
 
@@ -72,6 +73,7 @@ resource "aws_eks_access_entry" "eks_namespace_admin" {
   tags = {
     Name        = "${var.project_name}-${var.environment}-eks-admin-access"
     Environment = var.environment
+    Phase       = var.phase
   }
 }
 
@@ -88,6 +90,7 @@ resource "aws_iam_role" "eks_developer" {
     Name        = "${var.project_name}-${var.environment}-eks-developer"
     Environment = var.environment
     Purpose     = "EKS developer access"
+    Phase       = var.phase
   }
 }
 
@@ -103,6 +106,7 @@ resource "aws_eks_access_entry" "eks_developer" {
   tags = {
     Name        = "${var.project_name}-${var.environment}-eks-developer-access"
     Environment = var.environment
+    Phase       = var.phase
   }
 }
 
@@ -119,6 +123,7 @@ resource "aws_iam_role" "eks_readonly" {
     Name        = "${var.project_name}-${var.environment}-eks-readonly"
     Environment = var.environment
     Purpose     = "EKS read-only access"
+    Phase       = var.phase
   }
 }
 
@@ -134,5 +139,6 @@ resource "aws_eks_access_entry" "eks_readonly" {
   tags = {
     Name        = "${var.project_name}-${var.environment}-eks-readonly-access"
     Environment = var.environment
+    Phase       = var.phase
   }
 }

@@ -44,3 +44,8 @@ variable "github_repository_id" {
   description = "Immutable GitHub repository ID used in the OIDC subject claim."
   type        = string
 }
+
+variable "phase" {
+  description = "Portfolio phase that owns the module resources."
+  type        = string
+}

@@ -7,6 +7,7 @@ module "vpc" {
 
   project_name         = var.project_name
   environment          = var.environment
+  phase                = "03"
   vpc_cidr             = var.vpc_cidr
   availability_zones   = var.availability_zones
   public_subnet_cidrs  = var.public_subnet_cidrs
@@ -22,6 +23,7 @@ module "ecr" {
 
   project_name = var.project_name
   environment  = var.environment
+  phase        = "03"
 }
 
 # -----------------------------------------------------------------------------
@@ -42,6 +44,7 @@ module "eks" {
 
   project_name                = var.project_name
   environment                 = var.environment
+  phase                       = "04"
   private_subnet_ids          = module.vpc.private_subnet_ids
   cluster_public_access_cidrs = var.cluster_public_access_cidrs
   cluster_admin_principal_arn = var.eks_cluster_admin_principal_arn
@@ -60,6 +63,7 @@ module "workload_identity" {
 
   project_name = var.project_name
   environment  = var.environment
+  phase        = "09"
   cluster_name = module.eks[0].cluster_name
 
   # Wait for the EKS platform, including the Pod Identity Agent add-on,
@@ -84,6 +88,7 @@ module "human_eks_access" {
 
   project_name = var.project_name
   environment  = var.environment
+  phase        = "09"
   cluster_name = module.eks[0].cluster_name
 
   depends_on = [
@@ -100,6 +105,7 @@ module "cicd_iam" {
 
   project_name         = var.project_name
   environment          = var.environment
+  phase                = "05"
   github_owner         = "mkdevops89"
   github_owner_id      = "251259091"
   github_repository    = "baba-app"
@@ -125,6 +131,7 @@ module "automation_iam" {
 
   project_name         = var.project_name
   environment          = var.environment
+  phase                = "07"
   github_owner         = "mkdevops89"
   github_owner_id      = "251259091"
   github_repository    = "baba-app"
@@ -149,4 +156,5 @@ module "audit" {
 
   project_name = var.project_name
   environment  = var.environment
+  phase        = "09"
 }

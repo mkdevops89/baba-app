@@ -27,3 +27,8 @@ variable "private_subnet_cidrs" {
   description = "CIDR blocks for private subnets"
   type        = list(string)
 }
+
+variable "phase" {
+  description = "Portfolio phase that owns the module resources."
+  type        = string
+}

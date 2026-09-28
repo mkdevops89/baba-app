@@ -57,7 +57,8 @@ resource "aws_iam_role" "github_actions_infrastructure" {
     Name        = "${var.project_name}-${var.environment}-github-actions-infrastructure"
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    ManagedBy   = "Terraform"
+    Phase       = var.phase
     Purpose     = "infrastructure-lifecycle-automation"
   }
 }
@@ -684,7 +685,8 @@ resource "aws_iam_policy" "infrastructure_automation" {
   tags = {
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    Phase       = var.phase
+    ManagedBy   = "Terraform"
   }
 }
 
@@ -705,7 +707,8 @@ resource "aws_iam_policy" "phase09_security_automation" {
   tags = {
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    Phase       = "09"
+    ManagedBy   = "Terraform"
   }
 }
 

@@ -70,3 +70,8 @@ variable "github_environment" {
   description = "Protected GitHub Environment permitted to assume the infrastructure automation role."
   type        = string
 }
+
+variable "phase" {
+  description = "Portfolio phase that owns the module resources."
+  type        = string
+}

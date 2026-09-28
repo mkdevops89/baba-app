@@ -130,7 +130,8 @@ resource "aws_kms_key" "cloudtrail" {
   policy                  = data.aws_iam_policy_document.cloudtrail_kms.json
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-cloudtrail"
+    Name  = "${var.project_name}-${var.environment}-cloudtrail"
+    Phase = var.phase
   }
 }
 
@@ -153,7 +154,8 @@ resource "aws_s3_bucket" "cloudtrail" {
   bucket = local.bucket_name
 
   tags = {
-    Name = local.bucket_name
+    Name  = local.bucket_name
+    Phase = var.phase
   }
 }
 
@@ -356,7 +358,8 @@ resource "aws_cloudtrail" "management" {
   ]
 
   tags = {
-    Name = local.trail_name
+    Name  = local.trail_name
+    Phase = var.phase
   }
 }
 
@@ -370,7 +373,8 @@ resource "aws_cloudwatch_log_group" "cloudtrail" {
   kms_key_id        = aws_kms_key.cloudtrail.arn
 
   tags = {
-    Name = "${local.trail_name}-logs"
+    Name  = "${local.trail_name}-logs"
+    Phase = var.phase
   }
 }
 
@@ -392,7 +396,8 @@ resource "aws_iam_role" "cloudtrail_cloudwatch" {
   assume_role_policy = data.aws_iam_policy_document.cloudtrail_cloudwatch_assume_role.json
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch"
+    Name  = "${var.project_name}-${var.environment}-cloudtrail-cloudwatch"
+    Phase = var.phase
   }
 }
 

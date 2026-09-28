@@ -10,7 +10,8 @@ resource "aws_vpc" "this" {
   enable_dns_hostnames = true
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-vpc"
+    Name  = "${var.project_name}-${var.environment}-vpc"
+    Phase = var.phase
   }
 }
 
@@ -27,7 +28,8 @@ resource "aws_default_security_group" "default" {
   egress  = []
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-default-sg-restricted"
+    Name  = "${var.project_name}-${var.environment}-default-sg-restricted"
+    Phase = var.phase
   }
 }
 
@@ -45,7 +47,8 @@ resource "aws_internet_gateway" "this" {
   vpc_id = aws_vpc.this.id
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-igw"
+    Name  = "${var.project_name}-${var.environment}-igw"
+    Phase = var.phase
   }
 }
 
@@ -67,7 +70,8 @@ resource "aws_subnet" "public" {
   map_public_ip_on_launch = false
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-public-${var.availability_zones[count.index]}"
+    Name  = "${var.project_name}-${var.environment}-public-${var.availability_zones[count.index]}"
+    Phase = var.phase
 
     "kubernetes.io/role/elb" = "1"
   }
@@ -86,7 +90,8 @@ resource "aws_subnet" "private" {
   availability_zone = var.availability_zones[count.index]
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-private-${var.availability_zones[count.index]}"
+    Name  = "${var.project_name}-${var.environment}-private-${var.availability_zones[count.index]}"
+    Phase = var.phase
 
     "kubernetes.io/role/internal-elb" = "1"
   }
@@ -100,7 +105,8 @@ resource "aws_route_table" "public" {
   vpc_id = aws_vpc.this.id
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-public-rt"
+    Name  = "${var.project_name}-${var.environment}-public-rt"
+    Phase = var.phase
   }
 }
 
@@ -127,7 +133,8 @@ resource "aws_eip" "nat" {
   domain = "vpc"
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-nat-eip"
+    Name  = "${var.project_name}-${var.environment}-nat-eip"
+    Phase = var.phase
   }
 }
 
@@ -143,7 +150,8 @@ resource "aws_nat_gateway" "this" {
   ]
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-nat"
+    Name  = "${var.project_name}-${var.environment}-nat"
+    Phase = var.phase
   }
 }
 
@@ -156,7 +164,8 @@ resource "aws_route_table" "private" {
   vpc_id = aws_vpc.this.id
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-private-rt"
+    Name  = "${var.project_name}-${var.environment}-private-rt"
+    Phase = var.phase
   }
 }
 
@@ -187,7 +196,8 @@ resource "aws_cloudwatch_log_group" "vpc_flow_logs" {
   kms_key_id        = aws_kms_key.vpc_flow_logs.arn
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-vpc-flow-logs"
+    Name  = "${var.project_name}-${var.environment}-vpc-flow-logs"
+    Phase = var.phase
   }
 }
 
@@ -215,7 +225,8 @@ resource "aws_iam_role" "vpc_flow_logs" {
   })
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-vpc-flow-logs-role"
+    Name  = "${var.project_name}-${var.environment}-vpc-flow-logs-role"
+    Phase = var.phase
   }
 }
 
@@ -259,7 +270,8 @@ resource "aws_flow_log" "this" {
   vpc_id          = aws_vpc.this.id
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-vpc-flow-log"
+    Name  = "${var.project_name}-${var.environment}-vpc-flow-log"
+    Phase = var.phase
   }
 }
 
@@ -316,7 +328,8 @@ resource "aws_kms_key" "vpc_flow_logs" {
   })
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-vpc-flow-logs-kms"
+    Name  = "${var.project_name}-${var.environment}-vpc-flow-logs-kms"
+    Phase = var.phase
   }
 }
 
