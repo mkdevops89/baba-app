@@ -158,3 +158,16 @@ module "audit" {
   environment  = var.environment
   phase        = "09"
 }
+
+# -----------------------------------------------------------------------------
+# Phase 10 - FinOps read-only access
+# -----------------------------------------------------------------------------
+# This role remains available while EKS is disabled so cost governance and
+# reporting do not depend on the development cluster lifecycle.
+module "finops_iam" {
+  source = "../../modules/finops-iam"
+
+  project_name = var.project_name
+  environment  = var.environment
+  phase        = "10"
+}

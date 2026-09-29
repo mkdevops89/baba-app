@@ -674,6 +674,80 @@ data "aws_iam_policy_document" "phase09_security_automation" {
       "arn:aws:kms:*:*:alias/${var.project_name}-${var.environment}-backend-secret"
     ]
   }
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 FinOps IAM lifecycle
+  # ---------------------------------------------------------------------------
+  # Terraform may manage only the dedicated read-only FinOps role.
+  statement {
+    sid    = "ManageFinOpsReadOnlyRole"
+    effect = "Allow"
+
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListRolePolicies",
+      "iam:ListInstanceProfilesForRole"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-finops-readonly"
+    ]
+  }
+
+  # Restrict attachment operations to the dedicated FinOps policy. Automation
+  # cannot attach an unrelated or administrative managed policy to this role.
+  statement {
+    sid    = "AttachFinOpsReadOnlyPolicy"
+    effect = "Allow"
+
+    actions = [
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-finops-readonly"
+    ]
+
+    condition {
+      test     = "ArnLike"
+      variable = "iam:PolicyARN"
+
+      values = [
+        "arn:aws:iam::*:policy/${var.project_name}-${var.environment}-finops-readonly"
+      ]
+    }
+  }
+
+  # Terraform may manage only the customer-managed policy assigned to the
+  # dedicated FinOps role.
+  statement {
+    sid    = "ManageFinOpsReadOnlyPolicy"
+    effect = "Allow"
+
+    actions = [
+      "iam:CreatePolicy",
+      "iam:CreatePolicyVersion",
+      "iam:DeletePolicy",
+      "iam:DeletePolicyVersion",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListPolicyVersions",
+      "iam:SetDefaultPolicyVersion",
+      "iam:TagPolicy",
+      "iam:UntagPolicy"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:policy/${var.project_name}-${var.environment}-finops-readonly"
+    ]
+  }
 }
 
 resource "aws_iam_policy" "infrastructure_automation" {
