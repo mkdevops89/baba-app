@@ -125,11 +125,30 @@ resource "aws_route_table_association" "public" {
   route_table_id = aws_route_table.public.id
 }
 
+# Preserve existing Terraform addresses when converting these resources to
+# conditional single-instance resources.
+moved {
+  from = aws_eip.nat
+  to   = aws_eip.nat[0]
+}
+
+moved {
+  from = aws_nat_gateway.this
+  to   = aws_nat_gateway.this[0]
+}
+
+moved {
+  from = aws_route.private_nat_access
+  to   = aws_route.private_nat_access[0]
+}
+
 # -----------------------------------------------------------------------------
 # NAT Gateway
 # -----------------------------------------------------------------------------
 # Elastic IP assigned to the NAT Gateway.
 resource "aws_eip" "nat" {
+  count = var.enable_nat_gateway ? 1 : 0
+
   domain = "vpc"
 
   tags = {
@@ -142,7 +161,9 @@ resource "aws_eip" "nat" {
 # A production architecture would typically deploy one NAT Gateway per
 # Availability Zone for improved resiliency.
 resource "aws_nat_gateway" "this" {
-  allocation_id = aws_eip.nat.id
+  count = var.enable_nat_gateway ? 1 : 0
+
+  allocation_id = aws_eip.nat[0].id
   subnet_id     = aws_subnet.public[0].id
 
   depends_on = [
@@ -171,9 +192,11 @@ resource "aws_route_table" "private" {
 
 # Routes outbound internet traffic from private subnets through the NAT Gateway.
 resource "aws_route" "private_nat_access" {
+  count = var.enable_nat_gateway ? 1 : 0
+
   route_table_id         = aws_route_table.private.id
   destination_cidr_block = "0.0.0.0/0"
-  nat_gateway_id         = aws_nat_gateway.this.id
+  nat_gateway_id         = aws_nat_gateway.this[0].id
 }
 
 # Associates all private subnets with the private route table.

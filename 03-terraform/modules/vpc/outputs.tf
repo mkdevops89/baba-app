@@ -35,11 +35,11 @@ output "private_route_table_id" {
 
 output "nat_gateway_id" {
   description = "ID of the NAT Gateway"
-  value       = aws_nat_gateway.this.id
+  value       = var.enable_nat_gateway ? aws_nat_gateway.this[0].id : null
 }
 
 output "nat_eip" {
   description = "Public Elastic IP assigned to the NAT Gateway"
-  value       = aws_eip.nat.public_ip
+  value       = var.enable_nat_gateway ? aws_eip.nat[0].public_ip : null
 }
 

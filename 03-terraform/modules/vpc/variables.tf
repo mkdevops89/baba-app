@@ -32,3 +32,9 @@ variable "phase" {
   description = "Portfolio phase that owns the module resources."
   type        = string
 }
+
+variable "enable_nat_gateway" {
+  description = "Whether to create the development NAT Gateway, Elastic IP, and private default route."
+  type        = bool
+  default     = true
+}
