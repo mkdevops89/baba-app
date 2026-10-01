@@ -83,6 +83,28 @@ data "aws_iam_policy_document" "finops_readonly" {
     resources = ["*"]
   }
 
+  # Read-only inventory access supports regional waste detection without
+  # granting permission to create, modify, start, stop, or delete resources.
+  statement {
+    sid    = "ReadRegionalCostDrivers"
+    effect = "Allow"
+
+    actions = [
+      "ec2:DescribeAddresses",
+      "ec2:DescribeInstances",
+      "ec2:DescribeNatGateways",
+      "ec2:DescribeSnapshots",
+      "ec2:DescribeVolumes",
+      "ecr:DescribeImages",
+      "ecr:DescribeRepositories",
+      "eks:ListClusters",
+      "elasticloadbalancing:DescribeLoadBalancers",
+      "rds:DescribeDBInstances"
+    ]
+
+    resources = ["*"]
+  }
+
   # The tag-audit script uses key state only to distinguish active resources
   # from KMS keys that AWS is already permanently deleting.
   statement {
