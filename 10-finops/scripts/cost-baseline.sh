@@ -16,19 +16,21 @@ command -v jq >/dev/null 2>&1 || {
 }
 
 macos_date() {
-  date -v-30d +%F >/dev/null 2>&1
+  date -u -v-30d +%F >/dev/null 2>&1
 }
 
 if macos_date; then
-  DEFAULT_START="$(date -v-30d +%F)"
-  TODAY="$(date +%F)"
-  CURRENT_MONTH_START="$(date -v1d +%F)"
-  NEXT_MONTH_START="$(date -v1d -v+1m +%F)"
+  DEFAULT_START="$(date -u -v-30d +%F)"
+  TODAY="$(date -u +%F)"
+  CURRENT_MONTH_START="$(date -u -v1d +%F)"
+  NEXT_MONTH_START="$(date -u -v1d -v+1m +%F)"
 else
-  DEFAULT_START="$(date -d '30 days ago' +%F)"
-  TODAY="$(date +%F)"
-  CURRENT_MONTH_START="$(date +%Y-%m-01)"
-  NEXT_MONTH_START="$(date -d "${CURRENT_MONTH_START} +1 month" +%F)"
+  DEFAULT_START="$(date -u -d '30 days ago' +%F)"
+  TODAY="$(date -u +%F)"
+  CURRENT_MONTH_START="$(date -u +%Y-%m-01)"
+  NEXT_MONTH_START="$(
+    date -u -d "${CURRENT_MONTH_START} +1 month" +%F
+  )"
 fi
 
 START_DATE="${START_DATE:-${DEFAULT_START}}"

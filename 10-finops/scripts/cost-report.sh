@@ -32,12 +32,12 @@ command -v jq >/dev/null 2>&1 || {
   exit 1
 }
 
-if date -v1d +%F >/dev/null 2>&1; then
-  TODAY="$(date +%F)"
-  CURRENT_MONTH_START="$(date -v1d +%F)"
+if date -u -v1d +%F >/dev/null 2>&1; then
+  TODAY="$(date -u +%F)"
+  CURRENT_MONTH_START="$(date -u -v1d +%F)"
 else
-  TODAY="$(date +%F)"
-  CURRENT_MONTH_START="$(date +%Y-%m-01)"
+  TODAY="$(date -u +%F)"
+  CURRENT_MONTH_START="$(date -u +%Y-%m-01)"
 fi
 
 AWS_COMMAND=(
@@ -66,6 +66,12 @@ AWS_PROFILE="${AWS_PROFILE_NAME}" \
 AWS_REGION="${AWS_REGION_NAME}" \
   "${SCRIPT_DIR}/tag-audit.sh" \
   > "${TAG_FILE}"
+
+WASTE_FILE="${TEMP_DIR}/waste.json"
+AWS_PROFILE="${AWS_PROFILE_NAME}" \
+AWS_REGION="${AWS_REGION_NAME}" \
+  "${SCRIPT_DIR}/waste-audit.sh" \
+  > "${WASTE_FILE}"
 
 ACCOUNT_ID="$(
   "${AWS_COMMAND[@]}" sts get-caller-identity \
@@ -106,6 +112,7 @@ jq -n \
   --arg anomaly_end "${TODAY}" \
   --slurpfile baseline "${BASELINE_FILE}" \
   --slurpfile tags "${TAG_FILE}" \
+  --slurpfile waste "${WASTE_FILE}" \
   --slurpfile budget "${BUDGET_FILE}" \
   --slurpfile notifications "${NOTIFICATIONS_FILE}" \
   --slurpfile monitors "${MONITORS_FILE}" \
@@ -274,6 +281,15 @@ jq -n \
             })
           )
       },
+      waste_audit: {
+        status: $waste[0].status,
+        region: $waste[0].region,
+        snapshot_age_threshold_days:
+          $waste[0].snapshot_age_threshold_days,
+        summary: $waste[0].summary,
+        findings: $waste[0].findings,
+        ecr_inventory: $waste[0].ecr_inventory
+      },
       optimization_actions: [
         {
           action:
@@ -286,12 +302,21 @@ jq -n \
         },
         {
           action:
-            "Review persistent NAT Gateway hourly cost",
-          status: "open",
+            "Align the development NAT Gateway with the EKS lifecycle",
+          status: "implemented",
           approval:
-            "Required before infrastructure modification",
+            "Human-approved Terraform plan limited to NAT lifecycle resources",
           savings_status:
-            "Not yet estimated"
+            "Pending verification after Cost Explorer data matures"
+        },
+        {
+          action:
+            "Remove verified legacy and orphaned cloud resources",
+          status: "implemented",
+          approval:
+            "Manual ownership, dependency, and usage validation before deletion",
+          savings_status:
+            "EBS volumes, snapshots, idle Elastic IP, and legacy ECR repository removed"
         },
         {
           action:
