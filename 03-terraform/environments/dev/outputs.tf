@@ -101,3 +101,12 @@ output "github_actions_infrastructure_role_arn" {
   description = "IAM role ARN used by GitHub Actions for controlled infrastructure lifecycle operations."
   value       = module.automation_iam.github_actions_infrastructure_role_arn
 }
+
+# -----------------------------------------------------------------------------
+# Phase 10 FinOps outputs
+# -----------------------------------------------------------------------------
+
+output "finops_readonly_role_arn" {
+  description = "ARN of the dedicated FinOps read-only IAM role."
+  value       = module.finops_iam.finops_readonly_role_arn
+}

@@ -61,7 +61,8 @@ resource "aws_kms_key" "backend_secret" {
   policy                  = data.aws_iam_policy_document.backend_secret_kms.json
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-backend-secret"
+    Name  = "${var.project_name}-${var.environment}-backend-secret"
+    Phase = var.phase
   }
 }
 
@@ -84,7 +85,8 @@ resource "aws_secretsmanager_secret" "backend_config" {
   recovery_window_in_days = 0
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-backend-config"
+    Name  = "${var.project_name}-${var.environment}-backend-config"
+    Phase = var.phase
   }
 }
 
@@ -113,7 +115,8 @@ resource "aws_iam_role" "backend" {
   assume_role_policy = data.aws_iam_policy_document.backend_pod_identity_trust.json
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-backend-pod-identity"
+    Name  = "${var.project_name}-${var.environment}-backend-pod-identity"
+    Phase = var.phase
   }
 }
 

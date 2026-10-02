@@ -12,3 +12,8 @@ variable "cluster_name" {
   description = "EKS cluster that owns the Pod Identity association."
   type        = string
 }
+
+variable "phase" {
+  description = "Portfolio phase that owns the module resources."
+  type        = string
+}

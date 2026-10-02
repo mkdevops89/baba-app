@@ -10,6 +10,10 @@
 #
 # GitHub Environment protection provides an additional approval boundary
 # before AWS credentials can be issued for infrastructure lifecycle actions.
+data "aws_caller_identity" "current" {}
+
+data "aws_region" "current" {}
+
 data "aws_iam_policy_document" "github_actions_assume_role" {
   statement {
     sid     = "AllowBabaAppMainGitHubActions"
@@ -57,7 +61,8 @@ resource "aws_iam_role" "github_actions_infrastructure" {
     Name        = "${var.project_name}-${var.environment}-github-actions-infrastructure"
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    ManagedBy   = "Terraform"
+    Phase       = var.phase
     Purpose     = "infrastructure-lifecycle-automation"
   }
 }
@@ -673,6 +678,125 @@ data "aws_iam_policy_document" "phase09_security_automation" {
       "arn:aws:kms:*:*:alias/${var.project_name}-${var.environment}-backend-secret"
     ]
   }
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 cost-optimized NAT lifecycle
+  # ---------------------------------------------------------------------------
+  # The development NAT Gateway follows the EKS lifecycle. Permissions are
+  # limited to the EC2 resource types required to allocate, route, recreate,
+  # and remove that NAT infrastructure in the current account and Region.
+  statement {
+    sid    = "ManageDevelopmentNatLifecycle"
+    effect = "Allow"
+
+    actions = [
+      "ec2:AllocateAddress",
+      "ec2:ReleaseAddress",
+      "ec2:CreateNatGateway",
+      "ec2:DeleteNatGateway",
+      "ec2:CreateRoute",
+      "ec2:DeleteRoute"
+    ]
+
+    resources = [
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:elastic-ip/*",
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:natgateway/*",
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:route-table/*",
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:subnet/*",
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:vpc/*"
+    ]
+  }
+
+  # Terraform supplies the standard cost-allocation tags while allocating the
+  # Elastic IP and creating the NAT Gateway.
+  statement {
+    sid    = "ManageDevelopmentNatTags"
+    effect = "Allow"
+
+    actions = [
+      "ec2:CreateTags",
+      "ec2:DeleteTags"
+    ]
+
+    resources = [
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:elastic-ip/*",
+      "arn:aws:ec2:${data.aws_region.current.region}:${data.aws_caller_identity.current.account_id}:natgateway/*"
+    ]
+  }
+
+  # ---------------------------------------------------------------------------
+  # Phase 10 FinOps IAM lifecycle
+  # ---------------------------------------------------------------------------
+  # Terraform may manage only the dedicated read-only FinOps role.
+  statement {
+    sid    = "ManageFinOpsReadOnlyRole"
+    effect = "Allow"
+
+    actions = [
+      "iam:CreateRole",
+      "iam:DeleteRole",
+      "iam:GetRole",
+      "iam:UpdateAssumeRolePolicy",
+      "iam:TagRole",
+      "iam:UntagRole",
+      "iam:ListAttachedRolePolicies",
+      "iam:ListRolePolicies",
+      "iam:ListInstanceProfilesForRole"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-finops-readonly"
+    ]
+  }
+
+  # Restrict attachment operations to the dedicated FinOps policy. Automation
+  # cannot attach an unrelated or administrative managed policy to this role.
+  statement {
+    sid    = "AttachFinOpsReadOnlyPolicy"
+    effect = "Allow"
+
+    actions = [
+      "iam:AttachRolePolicy",
+      "iam:DetachRolePolicy"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:role/${var.project_name}-${var.environment}-finops-readonly"
+    ]
+
+    condition {
+      test     = "ArnLike"
+      variable = "iam:PolicyARN"
+
+      values = [
+        "arn:aws:iam::*:policy/${var.project_name}-${var.environment}-finops-readonly"
+      ]
+    }
+  }
+
+  # Terraform may manage only the customer-managed policy assigned to the
+  # dedicated FinOps role.
+  statement {
+    sid    = "ManageFinOpsReadOnlyPolicy"
+    effect = "Allow"
+
+    actions = [
+      "iam:CreatePolicy",
+      "iam:CreatePolicyVersion",
+      "iam:DeletePolicy",
+      "iam:DeletePolicyVersion",
+      "iam:GetPolicy",
+      "iam:GetPolicyVersion",
+      "iam:ListPolicyVersions",
+      "iam:SetDefaultPolicyVersion",
+      "iam:TagPolicy",
+      "iam:UntagPolicy"
+    ]
+
+    resources = [
+      "arn:aws:iam::*:policy/${var.project_name}-${var.environment}-finops-readonly"
+    ]
+  }
 }
 
 resource "aws_iam_policy" "infrastructure_automation" {
@@ -684,7 +808,8 @@ resource "aws_iam_policy" "infrastructure_automation" {
   tags = {
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    Phase       = var.phase
+    ManagedBy   = "Terraform"
   }
 }
 
@@ -705,7 +830,8 @@ resource "aws_iam_policy" "phase09_security_automation" {
   tags = {
     Project     = var.project_name
     Environment = var.environment
-    ManagedBy   = "terraform"
+    Phase       = "09"
+    ManagedBy   = "Terraform"
   }
 }
 

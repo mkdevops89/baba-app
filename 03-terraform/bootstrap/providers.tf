@@ -6,7 +6,10 @@ provider "aws" {
     tags = {
       Project     = var.project_name
       Environment = var.environment
-      ManagedBy   = "terraform"
+      ManagedBy   = "Terraform"
+      Owner       = "platform-engineering"
+      CostCenter  = "portfolio"
+      Phase       = "03"
       Repository  = "baba-app"
     }
   }

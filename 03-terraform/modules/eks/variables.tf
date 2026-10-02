@@ -63,3 +63,8 @@ variable "cluster_admin_principal_arn" {
   default     = null
   nullable    = true
 }
+
+variable "phase" {
+  description = "Portfolio phase that owns the module resources."
+  type        = string
+}

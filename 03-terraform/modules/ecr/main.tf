@@ -17,7 +17,8 @@ resource "aws_ecr_repository" "frontend" {
   }
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-frontend"
+    Name  = "${var.project_name}-${var.environment}-frontend"
+    Phase = var.phase
   }
 }
 
@@ -39,7 +40,8 @@ resource "aws_ecr_repository" "backend" {
   }
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-backend"
+    Name  = "${var.project_name}-${var.environment}-backend"
+    Phase = var.phase
   }
 }
 
@@ -80,7 +82,8 @@ resource "aws_kms_key" "ecr" {
   policy                  = data.aws_iam_policy_document.ecr_kms.json
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-ecr-kms"
+    Name  = "${var.project_name}-${var.environment}-ecr-kms"
+    Phase = var.phase
   }
 }
 

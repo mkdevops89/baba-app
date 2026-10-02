@@ -23,7 +23,8 @@ resource "aws_iam_role" "cluster" {
   })
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-eks-cluster-role"
+    Name  = "${var.project_name}-${var.environment}-eks-cluster-role"
+    Phase = var.phase
   }
 }
 
@@ -98,7 +99,8 @@ resource "aws_kms_key" "eks_logs" {
   policy                  = data.aws_iam_policy_document.eks_logs_kms.json
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-eks-control-plane-logs"
+    Name  = "${var.project_name}-${var.environment}-eks-control-plane-logs"
+    Phase = var.phase
   }
 }
 
@@ -113,7 +115,8 @@ resource "aws_cloudwatch_log_group" "cluster" {
   kms_key_id        = aws_kms_key.eks_logs.arn
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-eks-control-plane"
+    Name  = "${var.project_name}-${var.environment}-eks-control-plane"
+    Phase = var.phase
   }
 }
 
@@ -181,7 +184,8 @@ resource "aws_eks_cluster" "this" {
   ]
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-eks"
+    Name  = "${var.project_name}-${var.environment}-eks"
+    Phase = var.phase
   }
 }
 
@@ -200,7 +204,8 @@ resource "aws_eks_addon" "pod_identity_agent" {
   ]
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-pod-identity-agent"
+    Name  = "${var.project_name}-${var.environment}-pod-identity-agent"
+    Phase = var.phase
   }
 }
 
@@ -258,7 +263,8 @@ resource "aws_iam_role" "nodes" {
   })
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-eks-node-role"
+    Name  = "${var.project_name}-${var.environment}-eks-node-role"
+    Phase = var.phase
   }
 }
 
@@ -316,6 +322,7 @@ resource "aws_eks_node_group" "this" {
   ]
 
   tags = {
-    Name = "${var.project_name}-${var.environment}-eks-node-group"
+    Name  = "${var.project_name}-${var.environment}-eks-node-group"
+    Phase = var.phase
   }
 }
