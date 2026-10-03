@@ -83,7 +83,7 @@ jobs:
 
       # Install the kubectl version aligned with the Baba App EKS platform.
       - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
         with:
           version: "v1.36.3"
 
@@ -124,7 +124,7 @@ jobs:
 
       # Install the kubectl version aligned with the Baba App EKS platform.
       - name: Setup kubectl
-        uses: azure/setup-kubectl@v4
+        uses: azure/setup-kubectl@v5
         with:
           version: "v1.36.3"
 
