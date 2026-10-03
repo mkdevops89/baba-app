@@ -50,6 +50,8 @@ BASELINE_FILE="${TEMP_DIR}/baseline.json"
 TAG_FILE="${TEMP_DIR}/tags.json"
 BUDGET_FILE="${TEMP_DIR}/budget.json"
 NOTIFICATIONS_FILE="${TEMP_DIR}/notifications.json"
+BUDGET_SUBSCRIBERS_FILE="${TEMP_DIR}/budget-subscribers.json"
+COST_ALLOCATION_TAGS_FILE="${TEMP_DIR}/cost-allocation-tags.json"
 MONITORS_FILE="${TEMP_DIR}/monitors.json"
 SUBSCRIPTIONS_FILE="${TEMP_DIR}/subscriptions.json"
 ANOMALIES_FILE="${TEMP_DIR}/anomalies.json"
@@ -91,6 +93,52 @@ ACCOUNT_ID="$(
   --output json \
   > "${NOTIFICATIONS_FILE}"
 
+jq -c '.Notifications[]' "${NOTIFICATIONS_FILE}" |
+while IFS= read -r notification; do
+  subscribers="$(
+    "${AWS_COMMAND[@]}" budgets \
+      describe-subscribers-for-notification \
+      --account-id "${ACCOUNT_ID}" \
+      --budget-name "${BUDGET_NAME}" \
+      --notification "${notification}" \
+      --output json
+  )"
+
+  jq -n \
+    --argjson notification "${notification}" \
+    --argjson subscribers "${subscribers}" '
+      {
+        type: $notification.NotificationType,
+        comparison: $notification.ComparisonOperator,
+        threshold: $notification.Threshold,
+        threshold_type:
+          ($notification.ThresholdType // "PERCENTAGE"),
+        subscriber_count:
+          ($subscribers.Subscribers | length),
+        subscriber_types:
+          (
+            [
+              $subscribers.Subscribers[]
+              .SubscriptionType
+            ] |
+            unique
+          )
+      }
+    '
+done |
+jq -s '.' > "${BUDGET_SUBSCRIBERS_FILE}"
+
+"${AWS_COMMAND[@]}" ce list-cost-allocation-tags \
+  --tag-keys \
+    Project \
+    Environment \
+    ManagedBy \
+    Owner \
+    CostCenter \
+    Phase \
+  --output json \
+  > "${COST_ALLOCATION_TAGS_FILE}"
+
 "${AWS_COMMAND[@]}" ce get-anomaly-monitors \
   --output json \
   > "${MONITORS_FILE}"
@@ -114,7 +162,8 @@ jq -n \
   --slurpfile tags "${TAG_FILE}" \
   --slurpfile waste "${WASTE_FILE}" \
   --slurpfile budget "${BUDGET_FILE}" \
-  --slurpfile notifications "${NOTIFICATIONS_FILE}" \
+  --slurpfile budget_subscribers "${BUDGET_SUBSCRIBERS_FILE}" \
+  --slurpfile cost_allocation_tags "${COST_ALLOCATION_TAGS_FILE}" \
   --slurpfile monitors "${MONITORS_FILE}" \
   --slurpfile subscriptions "${SUBSCRIPTIONS_FILE}" \
   --slurpfile anomalies "${ANOMALIES_FILE}" '
@@ -167,16 +216,73 @@ jq -n \
           ),
         exceeded: ($actual_spend > $budget_limit),
         notifications:
+          (
+            $budget_subscribers[0] |
+            sort_by(.type, .threshold)
+          ),
+        notification_count:
+          ($budget_subscribers[0] | length),
+        notifications_with_subscribers:
+          (
+            [
+              $budget_subscribers[0][] |
+              select(.subscriber_count > 0)
+            ] |
+            length
+          ),
+        all_notifications_have_subscribers:
+          (
+            (($budget_subscribers[0] | length) > 0) and
+            all(
+              $budget_subscribers[0][];
+              .subscriber_count > 0
+            )
+          )
+      },
+      cost_allocation_tags: {
+        required_keys:
           [
-            $notifications[0].Notifications[] |
-            {
-              type: .NotificationType,
-              comparison: .ComparisonOperator,
-              threshold: .Threshold,
-              threshold_type: (.ThresholdType // "PERCENTAGE")
-            }
-          ] |
-          sort_by(.type, .threshold)
+            "Project",
+            "Environment",
+            "ManagedBy",
+            "Owner",
+            "CostCenter",
+            "Phase"
+          ],
+        required_count: 6,
+        active_count:
+          (
+            [
+              $cost_allocation_tags[0]
+              .CostAllocationTags[] |
+              select(.Status == "Active")
+            ] |
+            length
+          ),
+        all_required_active:
+          (
+            [
+              $cost_allocation_tags[0]
+              .CostAllocationTags[] |
+              select(.Status == "Active")
+            ] |
+            length == 6
+          ),
+        tags:
+          (
+            [
+              $cost_allocation_tags[0]
+              .CostAllocationTags[] |
+              {
+                tag_key: .TagKey,
+                type: .Type,
+                status: .Status,
+                last_updated: .LastUpdatedDate,
+                last_used: .LastUsedDate
+              }
+            ] |
+            sort_by(.tag_key)
+          )
       },
       anomaly_detection: {
         period: {

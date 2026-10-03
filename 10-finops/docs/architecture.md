@@ -39,6 +39,10 @@ forecasted spend, and notification thresholds.
 Budget alerts provide visibility. They do not automatically destroy or modify
 infrastructure.
 
+For every budget notification, the reporting workflow retrieves subscriber
+metadata and records only the subscriber count and delivery type. Subscriber
+addresses are intentionally excluded from generated reports.
+
 ### Resource Groups Tagging API
 
 The tag audit discovers resources associated with `Project=baba-app` and
@@ -53,6 +57,17 @@ evaluates the standard:
 
 KMS keys already pending deletion are reported separately and excluded from the
 active-resource compliance denominator.
+
+The discovery query is intentionally scoped to `Project=baba-app`. This
+provides deterministic Baba App reporting, but it cannot discover a resource
+that is missing the `Project` tag entirely. A 100% result therefore means that
+all active, taggable resources returned by the project-filtered query satisfy
+the required standard; it does not represent an unfiltered inventory of every
+resource in the AWS account.
+
+The consolidated report separately queries Cost Explorer for the activation
+state of the six required cost-allocation tag keys. This distinguishes
+resource-level compliance from billing-level cost-allocation readiness.
 
 ### Regional Waste Inventory
 

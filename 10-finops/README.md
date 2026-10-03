@@ -32,9 +32,40 @@ controls.
 | Cost baseline | 30-day unblended-cost report by day, service, and usage type |
 | Forecasting | UTC-aligned current-month Cost Explorer forecast |
 | Budget | `baba-app-monthly-budget` with a USD 50 monthly limit |
+
+### Budget Subscriber Validation
+
+The consolidated report verifies that every configured budget notification has
+at least one subscriber. It records subscriber counts and delivery types without
+including email addresses or other subscriber destinations in report output.
+
 | Budget alerts | Actual 50%, 80%, and 100%; forecasted 100% |
 | Anomaly detection | Daily email subscription with USD 5 and 20% impact thresholds |
 | Cost-allocation tags | Project, Environment, ManagedBy, Owner, CostCenter, and Phase |
+
+### Cost-Allocation Tag Activation
+
+The six required user-defined cost-allocation tag keys are active in AWS
+Billing and Cost Management:
+
+- `Project`
+- `Environment`
+- `ManagedBy`
+- `Owner`
+- `CostCenter`
+- `Phase`
+
+The consolidated report validates both resource-level tag compliance and
+billing-level tag activation. Resource tags alone are not sufficient for cost
+allocation because inactive keys cannot be used for AWS cost grouping and
+filtering.
+
+The tag audit discovers resources by querying the Resource Groups Tagging API
+with `Project=baba-app`. Therefore, its compliance percentage applies to active,
+taggable resources returned by that filtered query. Resources missing the
+`Project` tag entirely are outside that discovery path and require separate
+account-level inventory or tag-policy reconciliation.
+
 | Tag compliance | 100% of active in-scope taggable resources |
 | FinOps access | Dedicated read-only IAM role and customer-managed policy |
 | Waste detection | Account-region inventory of common cost-leak resources |
