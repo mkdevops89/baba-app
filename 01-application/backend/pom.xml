@@ -16,7 +16,12 @@
 	<properties>
 		<java.version>17</java.version>
 		<tomcat.version>10.1.59</tomcat.version>
-		<jackson-bom.version>2.21.5</jackson-bom.version>
+		<!--
+			Override Spring Boot's managed Jackson BOM with the patched release.
+			Jackson 2.21.7 remediates the HIGH vulnerabilities detected in
+			jackson-core and jackson-databind during Phase 11 container scanning.
+		-->
+		<jackson-bom.version>2.21.7</jackson-bom.version>
         <log4j2.version>2.25.5</log4j2.version>
 	</properties>
 	<dependencies>
