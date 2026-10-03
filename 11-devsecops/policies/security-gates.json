@@ -1,0 +1,133 @@
+{
+  "schema_version": "1.0",
+  "policy_id": "baba-app-devsecops-security-gates",
+  "effective_date": "2026-10-03",
+  "scope": {
+    "repository": "baba-app",
+    "protected_branch": "main",
+    "environment": "dev"
+  },
+  "severity_levels": [
+    "CRITICAL",
+    "HIGH",
+    "MEDIUM",
+    "LOW"
+  ],
+  "remediation_sla_days": {
+    "CRITICAL": 1,
+    "HIGH": 7,
+    "MEDIUM": 30,
+    "LOW": 90
+  },
+  "gates": [
+    {
+      "id": "secret-detection",
+      "scanner": "Gitleaks",
+      "category": "secrets",
+      "blocking_findings": [
+        "verified-secret"
+      ],
+      "exceptions_allowed": false,
+      "current_ci_behavior": "blocking-job",
+      "merge_enforcement": "pending-required-check-configuration"
+    },
+    {
+      "id": "static-analysis",
+      "scanner": "CodeQL",
+      "category": "sast",
+      "blocking_severities": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "exceptions_allowed": true,
+      "current_ci_behavior": "findings-uploaded",
+      "merge_enforcement": "pending-code-scanning-rule"
+    },
+    {
+      "id": "dependency-vulnerability",
+      "scanner": "Trivy",
+      "category": "dependencies",
+      "blocking_severities": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "exceptions_allowed": true,
+      "current_ci_behavior": "blocking-job",
+      "merge_enforcement": "pending-required-check-configuration"
+    },
+    {
+      "id": "container-vulnerability",
+      "scanner": "Trivy",
+      "category": "containers",
+      "blocking_severities": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "exceptions_allowed": true,
+      "current_ci_behavior": "blocking-job",
+      "merge_enforcement": "pending-required-check-configuration"
+    },
+    {
+      "id": "terraform-misconfiguration",
+      "scanner": "Checkov and Trivy",
+      "category": "infrastructure-as-code",
+      "blocking_severities": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "exceptions_allowed": true,
+      "current_ci_behavior": "blocking-job",
+      "merge_enforcement": "pending-required-check-configuration"
+    },
+    {
+      "id": "kubernetes-misconfiguration",
+      "scanner": "Checkov and Trivy",
+      "category": "kubernetes",
+      "blocking_severities": [
+        "CRITICAL",
+        "HIGH"
+      ],
+      "exceptions_allowed": true,
+      "current_ci_behavior": "blocking-job",
+      "merge_enforcement": "pending-required-check-configuration"
+    }
+  ],
+  "exception_requirements": {
+    "required_fields": [
+      "id",
+      "scanner",
+      "finding_id",
+      "scope",
+      "risk",
+      "rationale",
+      "compensating_controls",
+      "owner",
+      "status",
+      "created_date",
+      "expires_date",
+      "review_reference"
+    ],
+    "allowed_statuses": [
+      "accepted",
+      "remediation-planned",
+      "false-positive",
+      "expired",
+      "closed"
+    ],
+    "maximum_validity_days": 90,
+    "expired_exceptions_block_validation": true,
+    "missing_governance_records_block_validation": true,
+    "independent_approval_required_for_production": true
+  },
+  "evidence": {
+    "required": true,
+    "minimum_retention_days": 90,
+    "artifacts": [
+      "scanner-results",
+      "security-policy-validation",
+      "sbom",
+      "provenance-attestation",
+      "signature-verification"
+    ]
+  }
+}
