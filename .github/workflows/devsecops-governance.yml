@@ -1,0 +1,62 @@
+name: DevSecOps Governance
+
+# Run on every pull request to main. There are intentionally no path filters:
+# this gives the workflow a stable status on every PR so it can safely become a
+# required merge check without leaving unrelated pull requests stuck waiting.
+on:
+  pull_request:
+    branches:
+      - main
+
+  # Push validation gives developers feedback before opening a pull request and
+  # confirms the merged main branch still satisfies the governance policy.
+  push:
+    branches:
+      - main
+      - "feature/**"
+      - "security/**"
+      - "phase-**"
+
+  # Allow an authorized maintainer to rerun policy validation on demand, such
+  # as during an exception review or before an expiration date.
+  workflow_dispatch:
+
+# This workflow only reads repository content. It does not require AWS access,
+# OIDC tokens, security-event writes, pull-request writes, or artifact writes.
+permissions:
+  contents: read
+
+# Cancel an older run for the same branch or pull request after a newer commit
+# arrives, preventing stale results from consuming runner time.
+concurrency:
+  group: devsecops-governance-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  security-policy:
+    # Keep this job name stable because it will later become a required status
+    # check in the main-branch ruleset.
+    name: Validate Security Governance
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+
+    steps:
+      # Retrieve the policy, scripts, scanner configuration, and native
+      # suppressions that must be reconciled during validation.
+      - name: Checkout repository
+        uses: actions/checkout@v6
+
+      # Validate both scripts before execution. This reports shell syntax errors
+      # separately from policy or exception-governance failures.
+      - name: Validate governance script syntax
+        shell: bash
+        run: |
+          bash -n \
+            11-devsecops/scripts/validate-security-policy.sh \
+            11-devsecops/scripts/test-security-policy.sh
+
+      # Run the positive control and all fail-closed negative controls. The job
+      # fails if valid policy is rejected or any invalid policy is accepted.
+      - name: Test security policy enforcement
+        shell: bash
+        run: 11-devsecops/scripts/test-security-policy.sh

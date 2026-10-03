@@ -1,0 +1,15 @@
+# Default ownership ensures every repository path has an accountable maintainer.
+* @mkdevops89
+
+# Security-sensitive repository configuration and automation.
+/.github/ @mkdevops89
+/05-cicd/ @mkdevops89
+/07-automation/ @mkdevops89
+/09-identity/ @mkdevops89
+/10-finops/ @mkdevops89
+/11-devsecops/ @mkdevops89
+
+# Cloud and workload control planes require explicit security ownership.
+/03-terraform/ @mkdevops89
+/04-eks/ @mkdevops89
+/06-gitops/ @mkdevops89
