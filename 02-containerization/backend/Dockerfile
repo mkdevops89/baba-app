@@ -1,7 +1,7 @@
 # =========================
 # Build
 # =========================
-FROM maven:3.9.12-eclipse-temurin-17 AS builder
+FROM maven:3-eclipse-temurin-24 AS builder
 
 WORKDIR /app
 
