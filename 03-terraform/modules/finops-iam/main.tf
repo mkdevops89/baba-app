@@ -49,7 +49,8 @@ data "aws_iam_policy_document" "finops_readonly" {
       "ce:GetCostAndUsageWithResources",
       "ce:GetCostForecast",
       "ce:GetDimensionValues",
-      "ce:GetTags"
+      "ce:GetTags",
+      "ce:ListCostAllocationTags"
     ]
 
     resources = ["*"]

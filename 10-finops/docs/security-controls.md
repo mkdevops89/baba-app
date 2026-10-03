@@ -17,6 +17,15 @@ The FinOps role is separate from:
 This prevents reporting access from inheriting deployment or administrative
 permissions.
 
+The FinOps role may call `ce:ListCostAllocationTags` to inspect whether required
+billing tag keys are active. It is not permitted to call
+`ce:UpdateCostAllocationTagsStatus`; activation and deactivation remain
+administrative operations.
+
+Budget subscriber validation exposes only counts and delivery types. Email
+addresses and other subscriber destinations are not written to consolidated
+report artifacts.
+
 ## Trust Policy
 
 Only the AWS IAM Identity Center `AdministratorAccess` permission-set role in
@@ -109,6 +118,11 @@ Cost optimization does not remove:
 Terraform provider default tags enforce ownership and cost-allocation metadata.
 Module-level Phase tags identify the portfolio phase responsible for each
 resource.
+
+The project-filtered tag audit has a documented discovery limitation: resources
+without `Project=baba-app` are not returned by that query. This prevents the
+compliance percentage from being interpreted as a complete account-wide
+inventory assertion.
 
 ## Credential Handling
 

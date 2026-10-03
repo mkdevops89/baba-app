@@ -248,6 +248,30 @@ verified_monthly_savings_usd: null
 A verified savings value requires a complete post-EKS and post-NAT billing
 period compared with an appropriate pre-optimization baseline.
 
+## Post-Merge FinOps Hardening Validation
+
+Validation performed on 2026-10-02 confirmed:
+
+- All six required user-defined cost-allocation tag keys are active.
+- Each tag key reports recent AWS usage.
+- Four budget notifications are configured.
+- All four budget notifications have one email subscriber.
+- Subscriber addresses are excluded from generated reports.
+- `ce:ListCostAllocationTags` is allowed for the FinOps role.
+- `ce:UpdateCostAllocationTagsStatus` remains implicitly denied.
+- The consolidated report completed through an assumed
+  `baba-app-dev-finops-readonly` session.
+- The report returned six of six required cost-allocation tags active.
+- The report returned four of four budget notifications with subscribers.
+- Active in-scope tag compliance remained 100%.
+- The waste audit remained `PASS` with zero review findings.
+- Terraform returned no changes after the IAM policy update.
+- Temporary STS credentials were removed after validation.
+
+The tag-compliance result covers active, taggable resources discovered through
+the `Project=baba-app` Resource Groups Tagging API filter. Resources missing the
+project tag entirely are not discoverable through that filtered query.
+
 ## Final Status
 
 Phase 10 meets its acceptance criteria.
