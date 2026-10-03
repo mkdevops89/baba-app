@@ -1,0 +1,196 @@
+version: 2
+
+# Dependabot provides scheduled version updates for every dependency ecosystem
+# currently committed to Baba App. Security updates remain eligible as soon as
+# GitHub identifies a supported vulnerable dependency.
+updates:
+  # Keep third-party GitHub Actions current across all workflow files.
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      github-actions-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      github-actions-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  # Update the Next.js frontend manifest and its npm lockfile together.
+  - package-ecosystem: "npm"
+    directory: "/01-application/frontend"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:15"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      frontend-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      frontend-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  # Update the Spring Boot backend Maven dependency graph.
+  - package-ecosystem: "maven"
+    directory: "/01-application/backend"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:30"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 5
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      backend-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      backend-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  # Track base-image updates for the backend runtime image.
+  - package-ecosystem: "docker"
+    directory: "/02-containerization/backend"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "09:45"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 3
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      backend-container-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      backend-container-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  # Track base-image updates for the frontend runtime image.
+  - package-ecosystem: "docker"
+    directory: "/02-containerization/frontend"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:00"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 3
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      frontend-container-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      frontend-container-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  # Keep bootstrap provider selections current without combining their state
+  # lifecycle with the development environment.
+  - package-ecosystem: "terraform"
+    directory: "/03-terraform/bootstrap"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:15"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 3
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      bootstrap-terraform-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      bootstrap-terraform-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
+
+  # Keep the development environment's provider lockfile current and reviewable
+  # independently from bootstrap infrastructure.
+  - package-ecosystem: "terraform"
+    directory: "/03-terraform/environments/dev"
+    target-branch: "main"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "10:30"
+      timezone: "America/Chicago"
+    open-pull-requests-limit: 3
+    assignees:
+      - "mkdevops89"
+    commit-message:
+      prefix: "chore(deps)"
+    groups:
+      development-terraform-minor-and-patch:
+        applies-to: "version-updates"
+        patterns:
+          - "*"
+        update-types:
+          - "minor"
+          - "patch"
+      development-terraform-security:
+        applies-to: "security-updates"
+        patterns:
+          - "*"
