@@ -324,6 +324,28 @@
       "created_date": "2026-10-03",
       "expires_date": "2026-10-11",
       "review_reference": "05-cicd/trivy-container-ignore.yaml"
+    },
+    {
+      "id": "SEC-EXC-024",
+      "scanner": "Trivy",
+      "finding_id": "CVE-2026-93990",
+      "scope": [
+        "pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"
+      ],
+      "risk": "HIGH",
+      "rationale": "A fresh distroless image pull on 2026-10-03 confirmed that Debian Trixie does not currently provide a fixed libexpat1 package. The affected library belongs to the container runtime, while the remediated application JAR reports no HIGH or CRITICAL vulnerabilities.",
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root execution",
+        "Read-only root filesystem",
+        "Fresh base-image rebuild validation",
+        "Container vulnerability scanning"
+      ],
+      "owner": "platform-security",
+      "status": "remediation-planned",
+      "created_date": "2026-10-03",
+      "expires_date": "2026-10-11",
+      "review_reference": "05-cicd/trivy-container-ignore.yaml"
     }
   ]
 }

@@ -64,3 +64,17 @@ vulnerabilities:
       no fixed libexpat1 package version for this CVE. The Baba App application
       JAR is not affected. Reassess when Debian or the distroless runtime
       publishes an updated libexpat1 package.
+
+  # Temporary exception for an OS library in the distroless Java runtime.
+  # A fresh base-image pull on 2026-10-03 confirmed that Debian does not yet
+  # publish a fixed package. The exception expires and must be reassessed.
+  - id: CVE-2026-93990
+    purls:
+      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
+    expired_at: 2026-10-11
+    statement: >-
+      Debian 13 distroless runtime dependency. A fresh image pull on
+      2026-10-03 confirmed that no fixed libexpat1 package is currently
+      available. The backend application JAR has been remediated and reports
+      no HIGH or CRITICAL findings. Reassess when Debian or Distroless
+      publishes an updated runtime package.
