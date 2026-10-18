@@ -2,7 +2,7 @@ vulnerabilities:
   - id: CVE-2026-76642
     purls:
       - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
-    expired_at: 2026-10-06
+    expired_at: 2026-11-07
     statement: >-
       Debian 13 distroless runtime dependency. No fixed package version is
       currently available. Backend application JAR is not affected. Reassess
@@ -11,7 +11,7 @@ vulnerabilities:
   - id: CVE-2026-78408
     purls:
       - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
-    expired_at: 2026-10-06
+    expired_at: 2026-11-07
     statement: >-
       Debian 13 distroless runtime dependency. No fixed package version is
       currently available. Reassess when Debian or Distroless publishes an
@@ -20,7 +20,7 @@ vulnerabilities:
   - id: CVE-2026-78409
     purls:
       - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
-    expired_at: 2026-10-06
+    expired_at: 2026-11-07
     statement: >-
       Debian 13 distroless runtime dependency. No fixed package version is
       currently available. Reassess when Debian or Distroless publishes an
@@ -29,52 +29,8 @@ vulnerabilities:
   - id: CVE-2026-78410
     purls:
       - pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1
-    expired_at: 2026-10-06
+    expired_at: 2026-11-07
     statement: >-
       Debian 13 distroless runtime dependency. No fixed package version is
       currently available. Reassess when Debian or Distroless publishes an
       updated util-linux/libuuid1 package.
-
-  - id: CVE-2026-76956
-    purls:
-      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
-    expired_at: 2026-10-11
-    statement: >-
-      Debian 13 distroless runtime dependency. Debian Trixie currently
-      does not provide a fixed libexpat1 package for this CVE. The Baba App
-      application JAR is not affected. Reassess when Debian or the distroless
-      runtime publishes an updated libexpat1 package.
-
-  - id: CVE-2026-76957
-    purls:
-      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
-    expired_at: 2026-10-11
-    statement: >-
-      Debian 13 distroless runtime dependency. Debian Trixie currently
-      does not provide a fixed libexpat1 package for this CVE. The Baba App
-      application JAR is not affected. Reassess when Debian or the distroless
-      runtime publishes an updated libexpat1 package.
-  
-  - id: CVE-2026-66046
-    purls:
-      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
-    expired_at: 2026-10-11
-    statement: >-
-      Debian 13 distroless runtime dependency. The current Trivy scan reports
-      no fixed libexpat1 package version for this CVE. The Baba App application
-      JAR is not affected. Reassess when Debian or the distroless runtime
-      publishes an updated libexpat1 package.
-
-  # Temporary exception for an OS library in the distroless Java runtime.
-  # A fresh base-image pull on 2026-10-03 confirmed that Debian does not yet
-  # publish a fixed package. The exception expires and must be reassessed.
-  - id: CVE-2026-93990
-    purls:
-      - pkg:deb/debian/libexpat1@2.8.3-1~deb13u1
-    expired_at: 2026-10-11
-    statement: >-
-      Debian 13 distroless runtime dependency. A fresh image pull on
-      2026-10-03 confirmed that no fixed libexpat1 package is currently
-      available. The backend application JAR has been remediated and reports
-      no HIGH or CRITICAL findings. Reassess when Debian or Distroless
-      publishes an updated runtime package.

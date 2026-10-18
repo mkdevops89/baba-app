@@ -1,15 +1,15 @@
 name: DevSecOps Governance
 
 # Run on every pull request to main. There are intentionally no path filters:
-# this gives the workflow a stable status on every PR so it can safely become a
-# required merge check without leaving unrelated pull requests stuck waiting.
+# this provides a stable result on every PR, allowing the job to remain a
+# required check without leaving unrelated pull requests waiting indefinitely.
 on:
   pull_request:
     branches:
       - main
 
-  # Push validation gives developers feedback before opening a pull request and
-  # confirms the merged main branch still satisfies the governance policy.
+  # Validate changes before a pull request and confirm that the merged default
+  # branch continues to satisfy the security-governance policy.
   push:
     branches:
       - main
@@ -17,46 +17,108 @@ on:
       - "security/**"
       - "phase-**"
 
-  # Allow an authorized maintainer to rerun policy validation on demand, such
-  # as during an exception review or before an expiration date.
+  # Support manual reassessment before an exception expires or during an audit.
   workflow_dispatch:
 
-# This workflow only reads repository content. It does not require AWS access,
-# OIDC tokens, security-event writes, pull-request writes, or artifact writes.
+# Policy validation only needs repository read access. Artifact uploads use the
+# GitHub Actions artifact service and do not require a write-scoped GITHUB_TOKEN.
 permissions:
   contents: read
 
-# Cancel an older run for the same branch or pull request after a newer commit
-# arrives, preventing stale results from consuming runner time.
+# Cancel superseded runs so evidence represents the latest commit on a branch.
 concurrency:
   group: devsecops-governance-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
   security-policy:
-    # Keep this job name stable because it will later become a required status
-    # check in the main-branch ruleset.
+    # Keep this name stable because the main ruleset requires this exact check.
     name: Validate Security Governance
     runs-on: ubuntu-latest
     timeout-minutes: 5
 
     steps:
-      # Retrieve the policy, scripts, scanner configuration, and native
-      # suppressions that must be reconciled during validation.
+      # Retrieve policies, scanner suppressions, scripts, and documentation.
       - name: Checkout repository
         uses: actions/checkout@v6
 
-      # Validate both scripts before execution. This reports shell syntax errors
-      # separately from policy or exception-governance failures.
+      # Create non-sensitive metadata that associates retained evidence with the
+      # exact workflow execution, event, branch, and commit being validated.
+      - name: Initialize governance evidence
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          mkdir -p phase11-evidence
+
+          jq -n \
+            --arg generated_at_utc "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
+            --arg repository "${GITHUB_REPOSITORY}" \
+            --arg event_name "${GITHUB_EVENT_NAME}" \
+            --arg ref "${GITHUB_REF}" \
+            --arg commit_sha "${GITHUB_SHA}" \
+            --arg workflow "${GITHUB_WORKFLOW}" \
+            --arg run_id "${GITHUB_RUN_ID}" \
+            --arg run_attempt "${GITHUB_RUN_ATTEMPT}" \
+            '{
+              generated_at_utc: $generated_at_utc,
+              repository: $repository,
+              event_name: $event_name,
+              ref: $ref,
+              commit_sha: $commit_sha,
+              workflow: $workflow,
+              run_id: $run_id,
+              run_attempt: $run_attempt
+            }' \
+            > phase11-evidence/run-metadata.json
+
+      # Check shell syntax independently so implementation errors are clearly
+      # distinguishable from policy violations in the retained evidence.
       - name: Validate governance script syntax
         shell: bash
         run: |
-          bash -n \
-            11-devsecops/scripts/validate-security-policy.sh \
-            11-devsecops/scripts/test-security-policy.sh
+          set -euo pipefail
 
-      # Run the positive control and all fail-closed negative controls. The job
-      # fails if valid policy is rejected or any invalid policy is accepted.
+          {
+            echo "Validating governance script syntax"
+
+            bash -n \
+              11-devsecops/scripts/validate-security-policy.sh \
+              11-devsecops/scripts/test-security-policy.sh
+
+            echo "PASS: governance script syntax is valid"
+          } 2>&1 |
+          tee phase11-evidence/bash-syntax-validation.log
+
+      # Produce a direct policy-validation report containing the exception and
+      # native-suppression reconciliation results.
+      - name: Validate security policy
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          11-devsecops/scripts/validate-security-policy.sh \
+            2>&1 |
+          tee phase11-evidence/security-policy-validation.log
+
+      # Execute positive and fail-closed negative controls. The workflow fails
+      # if valid policy is rejected or deliberately invalid policy is accepted.
       - name: Test security policy enforcement
         shell: bash
-        run: 11-devsecops/scripts/test-security-policy.sh
+        run: |
+          set -euo pipefail
+
+          11-devsecops/scripts/test-security-policy.sh \
+            2>&1 |
+          tee phase11-evidence/security-policy-tests.log
+
+      # Retain evidence even when a preceding validation step fails. This makes
+      # failed runs reviewable without granting the workflow write permissions.
+      - name: Upload governance evidence
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: devsecops-governance-${{ github.run_id }}-${{ github.run_attempt }}
+          path: phase11-evidence/
+          if-no-files-found: error
+          retention-days: 90

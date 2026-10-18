@@ -7,10 +7,17 @@
       "id": "SEC-EXC-001",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_39",
-      "scope": ["03-terraform/modules/eks/main.tf"],
+      "scope": [
+        "03-terraform/modules/eks/main.tf"
+      ],
       "risk": "HIGH",
       "rationale": "The development EKS public API endpoint supports external administration and is restricted to explicitly approved /32 CIDRs. Private endpoint access remains enabled.",
-      "compensating_controls": ["Approved /32 CIDR allowlist", "Private endpoint enabled", "Dedicated EKS access roles", "Namespace-scoped Kubernetes RBAC"],
+      "compensating_controls": [
+        "Approved /32 CIDR allowlist",
+        "Private endpoint enabled",
+        "Dedicated EKS access roles",
+        "Namespace-scoped Kubernetes RBAC"
+      ],
       "owner": "platform-engineering",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -21,10 +28,16 @@
       "id": "SEC-EXC-002",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_58",
-      "scope": ["03-terraform/modules/eks/main.tf"],
+      "scope": [
+        "03-terraform/modules/eks/main.tf"
+      ],
       "risk": "MEDIUM",
       "rationale": "EKS uses AWS-managed default envelope encryption. Customer-managed KMS encryption is deferred to later production and compliance hardening.",
-      "compensating_controls": ["AWS-managed envelope encryption", "Secrets Manager for application secrets", "KMS encryption for backend configuration"],
+      "compensating_controls": [
+        "AWS-managed envelope encryption",
+        "Secrets Manager for application secrets",
+        "KMS encryption for backend configuration"
+      ],
       "owner": "platform-engineering",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
@@ -35,10 +48,16 @@
       "id": "SEC-EXC-003",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_339",
-      "scope": ["03-terraform/modules/eks/main.tf"],
+      "scope": [
+        "03-terraform/modules/eks/main.tf"
+      ],
       "risk": "LOW",
       "rationale": "The installed Checkov policy reports EKS 1.36 as unsupported even though the version was reviewed against current AWS support.",
-      "compensating_controls": ["AWS-supported-version review", "Terraform-controlled cluster version", "Scheduled scanner reassessment"],
+      "compensating_controls": [
+        "AWS-supported-version review",
+        "Terraform-controlled cluster version",
+        "Scheduled scanner reassessment"
+      ],
       "owner": "platform-engineering",
       "status": "false-positive",
       "created_date": "2026-10-03",
@@ -49,10 +68,16 @@
       "id": "SEC-EXC-004",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_109",
-      "scope": ["03-terraform/modules"],
+      "scope": [
+        "03-terraform/modules"
+      ],
       "risk": "MEDIUM",
       "rationale": "The flagged KMS account-administration statements were manually reviewed and intentionally retain account-level key administration.",
-      "compensating_controls": ["Separate key-use permissions", "Least-privilege service statements", "CloudTrail management-event auditing"],
+      "compensating_controls": [
+        "Separate key-use permissions",
+        "Least-privilege service statements",
+        "CloudTrail management-event auditing"
+      ],
       "owner": "platform-security",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -63,10 +88,16 @@
       "id": "SEC-EXC-005",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_111",
-      "scope": ["03-terraform/modules"],
+      "scope": [
+        "03-terraform/modules"
+      ],
       "risk": "MEDIUM",
       "rationale": "The flagged KMS account-administration statements were manually reviewed and are constrained by their KMS key policies.",
-      "compensating_controls": ["Key-policy boundaries", "Separate administration and usage statements", "CloudTrail auditing"],
+      "compensating_controls": [
+        "Key-policy boundaries",
+        "Separate administration and usage statements",
+        "CloudTrail auditing"
+      ],
       "owner": "platform-security",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -77,10 +108,16 @@
       "id": "SEC-EXC-006",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_356",
-      "scope": ["03-terraform/modules"],
+      "scope": [
+        "03-terraform/modules"
+      ],
       "risk": "MEDIUM",
       "rationale": "Resource wildcard values inside KMS key policies refer to the specific KMS key governed by each policy rather than unrestricted AWS resources.",
-      "compensating_controls": ["KMS key-policy boundary", "Restricted principals", "Restricted KMS actions"],
+      "compensating_controls": [
+        "KMS key-policy boundary",
+        "Restricted principals",
+        "Restricted KMS actions"
+      ],
       "owner": "platform-security",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -91,10 +128,20 @@
       "id": "SEC-EXC-007",
       "scanner": "Checkov",
       "finding_id": "CKV2_K8S_6",
-      "scope": ["04-eks", "06-gitops", "08-observability", "09-identity"],
+      "scope": [
+        "04-eks",
+        "06-gitops",
+        "08-observability",
+        "09-identity"
+      ],
       "risk": "HIGH",
       "rationale": "Namespace and workload NetworkPolicies are scheduled for implementation during Phase 14 Kubernetes Security.",
-      "compensating_controls": ["Namespace isolation", "Kubernetes RBAC", "Non-root workloads", "Restricted AWS security groups"],
+      "compensating_controls": [
+        "Namespace isolation",
+        "Kubernetes RBAC",
+        "Non-root workloads",
+        "Restricted AWS security groups"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
@@ -105,10 +152,19 @@
       "id": "SEC-EXC-008",
       "scanner": "Checkov",
       "finding_id": "CKV_K8S_15",
-      "scope": ["04-eks", "06-gitops", "08-observability", "09-identity"],
+      "scope": [
+        "04-eks",
+        "06-gitops",
+        "08-observability",
+        "09-identity"
+      ],
       "risk": "LOW",
       "rationale": "Deployments use immutable SHA256 image digests rather than mutable image tags. The scanner does not recognize the digest-based deployment control.",
-      "compensating_controls": ["SHA256 image pinning", "Cosign signature verification", "GitOps-controlled manifests"],
+      "compensating_controls": [
+        "SHA256 image pinning",
+        "Cosign signature verification",
+        "GitOps-controlled manifests"
+      ],
       "owner": "platform-security",
       "status": "false-positive",
       "created_date": "2026-10-03",
@@ -119,10 +175,17 @@
       "id": "SEC-EXC-009",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_18",
-      "scope": ["03-terraform/modules/audit/main.tf"],
+      "scope": [
+        "03-terraform/modules/audit/main.tf"
+      ],
       "risk": "LOW",
       "rationale": "Separate server-access logging for the dedicated CloudTrail archive bucket is deferred to avoid recursive or duplicate audit logging.",
-      "compensating_controls": ["CloudTrail log-file validation", "KMS encryption", "Versioning", "Public-access blocking"],
+      "compensating_controls": [
+        "CloudTrail log-file validation",
+        "KMS encryption",
+        "Versioning",
+        "Public-access blocking"
+      ],
       "owner": "platform-security",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -133,10 +196,17 @@
       "id": "SEC-EXC-010",
       "scanner": "Checkov",
       "finding_id": "CKV2_AWS_62",
-      "scope": ["03-terraform/modules/audit/main.tf"],
+      "scope": [
+        "03-terraform/modules/audit/main.tf"
+      ],
       "risk": "MEDIUM",
       "rationale": "Event-driven notification for the CloudTrail archive is deferred to Phase 12 Security Monitoring.",
-      "compensating_controls": ["CloudTrail logging enabled", "CloudWatch Logs integration", "KMS encryption", "Log-file validation"],
+      "compensating_controls": [
+        "CloudTrail logging enabled",
+        "CloudWatch Logs integration",
+        "KMS encryption",
+        "Log-file validation"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
@@ -147,10 +217,17 @@
       "id": "SEC-EXC-011",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_144",
-      "scope": ["03-terraform/modules/audit/main.tf"],
+      "scope": [
+        "03-terraform/modules/audit/main.tf"
+      ],
       "risk": "MEDIUM",
       "rationale": "CloudTrail archive cross-Region replication is deferred until Phase 18 defines the recovery Region, replication key, role, retention, RPO, and recovery procedures.",
-      "compensating_controls": ["S3 versioning", "KMS encryption", "Object retention controls", "Multi-Region CloudTrail"],
+      "compensating_controls": [
+        "S3 versioning",
+        "KMS encryption",
+        "Object retention controls",
+        "Multi-Region CloudTrail"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
@@ -161,10 +238,16 @@
       "id": "SEC-EXC-012",
       "scanner": "Checkov",
       "finding_id": "CKV_AWS_252",
-      "scope": ["03-terraform/modules/audit/main.tf"],
+      "scope": [
+        "03-terraform/modules/audit/main.tf"
+      ],
       "risk": "MEDIUM",
       "rationale": "CloudTrail SNS delivery is deferred because the current audit baseline sends events to CloudWatch Logs. Security alerting will be added during Phase 12.",
-      "compensating_controls": ["CloudWatch Logs integration", "CloudTrail log-file validation", "KMS encryption"],
+      "compensating_controls": [
+        "CloudWatch Logs integration",
+        "CloudTrail log-file validation",
+        "KMS encryption"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
@@ -175,10 +258,17 @@
       "id": "SEC-EXC-013",
       "scanner": "Checkov",
       "finding_id": "CKV2_AWS_57",
-      "scope": ["03-terraform/modules/workload-identity/main.tf"],
+      "scope": [
+        "03-terraform/modules/workload-identity/main.tf"
+      ],
       "risk": "MEDIUM",
       "rationale": "The secret contains disposable development configuration used to validate EKS Pod Identity and does not represent a production credential requiring automated rotation.",
-      "compensating_controls": ["Customer-managed KMS encryption", "Pod Identity least privilege", "Development-only scope", "No long-lived AWS access keys"],
+      "compensating_controls": [
+        "Customer-managed KMS encryption",
+        "Pod Identity least privilege",
+        "Development-only scope",
+        "No long-lived AWS access keys"
+      ],
       "owner": "platform-engineering",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -189,10 +279,16 @@
       "id": "SEC-EXC-014",
       "scanner": "Trivy",
       "finding_id": "AWS-0039",
-      "scope": ["03-terraform/modules/eks/main.tf"],
+      "scope": [
+        "03-terraform/modules/eks/main.tf"
+      ],
       "risk": "MEDIUM",
       "rationale": "EKS uses AWS-managed default envelope encryption. Customer-managed control-plane encryption is deferred to production hardening.",
-      "compensating_controls": ["AWS-managed envelope encryption", "Secrets Manager", "Application-secret KMS encryption"],
+      "compensating_controls": [
+        "AWS-managed envelope encryption",
+        "Secrets Manager",
+        "Application-secret KMS encryption"
+      ],
       "owner": "platform-engineering",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
@@ -203,10 +299,17 @@
       "id": "SEC-EXC-015",
       "scanner": "Trivy",
       "finding_id": "AWS-0040",
-      "scope": ["03-terraform/modules/eks/main.tf"],
+      "scope": [
+        "03-terraform/modules/eks/main.tf"
+      ],
       "risk": "HIGH",
       "rationale": "Public EKS API administration is retained for the development environment and restricted to explicitly approved /32 CIDRs.",
-      "compensating_controls": ["Approved /32 CIDRs", "Private API access", "Dedicated human access roles", "Namespace-scoped RBAC"],
+      "compensating_controls": [
+        "Approved /32 CIDRs",
+        "Private API access",
+        "Dedicated human access roles",
+        "Namespace-scoped RBAC"
+      ],
       "owner": "platform-engineering",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -217,10 +320,17 @@
       "id": "SEC-EXC-016",
       "scanner": "Trivy",
       "finding_id": "AWS-0041",
-      "scope": ["03-terraform/modules/eks/main.tf"],
+      "scope": [
+        "03-terraform/modules/eks/main.tf"
+      ],
       "risk": "HIGH",
       "rationale": "The development EKS API endpoint is intentionally public but is not open to the internet and remains restricted to approved administrative CIDRs.",
-      "compensating_controls": ["CIDR allowlist", "Private endpoint enabled", "EKS Access Entries", "CloudTrail auditing"],
+      "compensating_controls": [
+        "CIDR allowlist",
+        "Private endpoint enabled",
+        "EKS Access Entries",
+        "CloudTrail auditing"
+      ],
       "owner": "platform-engineering",
       "status": "accepted",
       "created_date": "2026-10-03",
@@ -231,99 +341,168 @@
       "id": "SEC-EXC-017",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-76642",
-      "scope": ["pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"],
+      "scope": [
+        "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "No fixed Debian 13 package is currently available. The dependency belongs to the distroless runtime and the backend application JAR is not affected.",
-      "compensating_controls": ["Distroless runtime", "Non-root container", "Read-only root filesystem", "Dropped Linux capabilities"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root container",
+        "Read-only root filesystem",
+        "Dropped Linux capabilities"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-06",
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-08",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
       "review_reference": "05-cicd/trivy-container-ignore.yaml"
     },
     {
       "id": "SEC-EXC-018",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-78408",
-      "scope": ["pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"],
+      "scope": [
+        "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "No fixed Debian 13 package is currently available. The dependency belongs to the distroless runtime.",
-      "compensating_controls": ["Distroless runtime", "Non-root container", "Read-only root filesystem", "Dropped Linux capabilities"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root container",
+        "Read-only root filesystem",
+        "Dropped Linux capabilities"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-06",
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-08",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
       "review_reference": "05-cicd/trivy-container-ignore.yaml"
     },
     {
       "id": "SEC-EXC-019",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-78409",
-      "scope": ["pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"],
+      "scope": [
+        "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "No fixed Debian 13 package is currently available. The dependency belongs to the distroless runtime.",
-      "compensating_controls": ["Distroless runtime", "Non-root container", "Read-only root filesystem", "Dropped Linux capabilities"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root container",
+        "Read-only root filesystem",
+        "Dropped Linux capabilities"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-06",
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-08",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
       "review_reference": "05-cicd/trivy-container-ignore.yaml"
     },
     {
       "id": "SEC-EXC-020",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-78410",
-      "scope": ["pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"],
+      "scope": [
+        "pkg:deb/debian/libuuid1@2.41.5-0%2Bdeb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "No fixed Debian 13 package is currently available. The dependency belongs to the distroless runtime.",
-      "compensating_controls": ["Distroless runtime", "Non-root container", "Read-only root filesystem", "Dropped Linux capabilities"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root container",
+        "Read-only root filesystem",
+        "Dropped Linux capabilities"
+      ],
       "owner": "platform-security",
       "status": "remediation-planned",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-06",
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-08",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
       "review_reference": "05-cicd/trivy-container-ignore.yaml"
     },
     {
       "id": "SEC-EXC-021",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-76956",
-      "scope": ["pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"],
+      "scope": [
+        "pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "Debian Trixie does not currently provide a fixed package. The vulnerable library is part of the distroless runtime and the application JAR is not affected.",
-      "compensating_controls": ["Distroless runtime", "Non-root execution", "Read-only root filesystem", "Container vulnerability scanning"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root execution",
+        "Read-only root filesystem",
+        "Container vulnerability scanning"
+      ],
       "owner": "platform-security",
-      "status": "remediation-planned",
+      "status": "closed",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-11",
-      "review_reference": "05-cicd/trivy-container-ignore.yaml"
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-18",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
+      "review_reference": "05-cicd/trivy-container-ignore.yaml",
+      "closed_date": "2026-10-18",
+      "closure_evidence": "Fresh no-cache backend image scan using image ID sha256:8f5330fc5a48c1d5ac0ae5e12b2df32c8cd6192fab0927be43f97bc285207b3c and an updated Trivy vulnerability database no longer detected CVE-2026-76956. The native suppression was removed. Reopen or create a new governed record if the finding is reported again."
     },
     {
       "id": "SEC-EXC-022",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-76957",
-      "scope": ["pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"],
+      "scope": [
+        "pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "Debian Trixie does not currently provide a fixed package. The vulnerable library is part of the distroless runtime and the application JAR is not affected.",
-      "compensating_controls": ["Distroless runtime", "Non-root execution", "Read-only root filesystem", "Container vulnerability scanning"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root execution",
+        "Read-only root filesystem",
+        "Container vulnerability scanning"
+      ],
       "owner": "platform-security",
-      "status": "remediation-planned",
+      "status": "closed",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-11",
-      "review_reference": "05-cicd/trivy-container-ignore.yaml"
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-18",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
+      "review_reference": "05-cicd/trivy-container-ignore.yaml",
+      "closed_date": "2026-10-18",
+      "closure_evidence": "Fresh no-cache backend image scan using image ID sha256:8f5330fc5a48c1d5ac0ae5e12b2df32c8cd6192fab0927be43f97bc285207b3c and an updated Trivy vulnerability database no longer detected CVE-2026-76957. The native suppression was removed. Reopen or create a new governed record if the finding is reported again."
     },
     {
       "id": "SEC-EXC-023",
       "scanner": "Trivy",
       "finding_id": "CVE-2026-66046",
-      "scope": ["pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"],
+      "scope": [
+        "pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"
+      ],
       "risk": "HIGH",
       "rationale": "The current scan reports no fixed Debian Trixie package. The affected runtime library is not part of the backend application JAR.",
-      "compensating_controls": ["Distroless runtime", "Non-root execution", "Read-only root filesystem", "Container vulnerability scanning"],
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root execution",
+        "Read-only root filesystem",
+        "Container vulnerability scanning"
+      ],
       "owner": "platform-security",
-      "status": "remediation-planned",
+      "status": "closed",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-11",
-      "review_reference": "05-cicd/trivy-container-ignore.yaml"
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-18",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
+      "review_reference": "05-cicd/trivy-container-ignore.yaml",
+      "closed_date": "2026-10-18",
+      "closure_evidence": "Fresh no-cache backend image scan using image ID sha256:8f5330fc5a48c1d5ac0ae5e12b2df32c8cd6192fab0927be43f97bc285207b3c and an updated Trivy vulnerability database no longer detected CVE-2026-66046. The native suppression was removed. Reopen or create a new governed record if the finding is reported again."
     },
     {
       "id": "SEC-EXC-024",
@@ -342,10 +521,40 @@
         "Container vulnerability scanning"
       ],
       "owner": "platform-security",
-      "status": "remediation-planned",
+      "status": "closed",
       "created_date": "2026-10-03",
-      "expires_date": "2026-10-11",
-      "review_reference": "05-cicd/trivy-container-ignore.yaml"
+      "expires_date": "2026-11-07",
+      "last_reviewed_date": "2026-10-18",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed the finding remains affected with no fixed Debian package. All fixable application-layer findings were remediated.",
+      "review_reference": "05-cicd/trivy-container-ignore.yaml",
+      "closed_date": "2026-10-18",
+      "closure_evidence": "Fresh no-cache backend image scan using image ID sha256:8f5330fc5a48c1d5ac0ae5e12b2df32c8cd6192fab0927be43f97bc285207b3c and an updated Trivy vulnerability database no longer detected CVE-2026-93990. The native suppression was removed. Reopen or create a new governed record if the finding is reported again."
+    },
+    {
+      "id": "SEC-EXC-025",
+      "scanner": "Trivy",
+      "finding_id": "CVE-2026-77214",
+      "scope": [
+        "pkg:deb/debian/libexpat1@2.8.3-1~deb13u1"
+      ],
+      "risk": "HIGH",
+      "rationale": "A fresh no-cache backend image rebuild confirmed that Debian Trixie does not currently provide a fixed libexpat1 package. The finding belongs to the Distroless runtime layer, while the backend application JAR reports no HIGH or CRITICAL vulnerabilities.",
+      "compensating_controls": [
+        "Distroless runtime",
+        "Non-root execution",
+        "Read-only root filesystem",
+        "Fresh base-image rebuild validation",
+        "Container vulnerability scanning"
+      ],
+      "owner": "platform-security",
+      "status": "closed",
+      "created_date": "2026-10-10",
+      "expires_date": "2026-11-09",
+      "last_reviewed_date": "2026-10-18",
+      "review_evidence": "Fresh no-cache backend image rebuild used Distroless Debian 13 base digest sha256:b318d135426b282db46c3e2601edeb41eb7b157d9ab75d2f9499743180cddf0e. Trivy 0.74.0 confirmed CVE-2026-77214 remains affected with no fixed Debian package. The application JAR reported zero HIGH or CRITICAL findings.",
+      "review_reference": "05-cicd/trivy-container-ignore.yaml",
+      "closed_date": "2026-10-18",
+      "closure_evidence": "Fresh no-cache backend image scan using image ID sha256:8f5330fc5a48c1d5ac0ae5e12b2df32c8cd6192fab0927be43f97bc285207b3c and an updated Trivy vulnerability database no longer detected CVE-2026-77214. The native suppression was removed. Reopen or create a new governed record if the finding is reported again."
     }
   ]
 }
