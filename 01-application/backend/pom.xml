@@ -5,7 +5,7 @@
 	<parent>
 		<groupId>org.springframework.boot</groupId>
 		<artifactId>spring-boot-starter-parent</artifactId>
-		<version>3.5.16</version>
+		<version>4.0.8</version>
 		<relativePath/> <!-- lookup parent from repository -->
 	</parent>
 	<groupId>com.babaapp</groupId>
@@ -15,13 +15,19 @@
 	<description>Backend service for Baba App</description>
 	<properties>
 		<java.version>17</java.version>
-		<tomcat.version>10.1.59</tomcat.version>
+
 		<!--
-			Override Spring Boot's managed Jackson BOM with the patched release.
-			Jackson 2.21.7 remediates the HIGH vulnerabilities detected in
-			jackson-core and jackson-databind during Phase 11 container scanning.
-		-->
-		<jackson-bom.version>2.21.7</jackson-bom.version>
+		    Temporary security overrides for versions that are newer than those
+		    managed by Spring Boot 4.0.8. Remove each override after the Spring Boot
+		    BOM manages an equal or newer patched release.
+	    -->
+	    <tomcat.version>11.0.25</tomcat.version>
+	    <jackson-bom.version>3.1.7</jackson-bom.version>
+
+	    <!--
+		    Preserve the previously validated Log4j release until Spring Boot manages
+		    an equal or newer version and the container scan confirms it is clean.
+	    -->
         <log4j2.version>2.25.5</log4j2.version>
 	</properties>
 	<dependencies>
@@ -29,13 +35,40 @@
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-data-jpa</artifactId>
 		</dependency>
+		<!--
+	       Spring Boot 4 separates Spring MVC into its dedicated starter. This REST
+	       application uses the servlet stack and does not require Spring WebFlux.
+        -->
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
-			<artifactId>spring-boot-starter-web</artifactId>
+			<artifactId>spring-boot-starter-webmvc</artifactId>
 		</dependency>
+
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-security</artifactId>
+		</dependency>
+
+		<!--
+			Spring Boot 4 separates MVC test auto-configuration into a dedicated
+			module. This dependency provides @AutoConfigureMockMvc and the test
+			infrastructure needed to exercise the real MVC and security filters.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-webmvc-test</artifactId>
+			<scope>test</scope>
+		</dependency>
+
+		<!--
+			Provide Spring Security test utilities for authenticated and
+			unauthenticated request validation. The current tests exercise the
+			real SecurityFilterChain without creating production credentials.
+		-->
+		<dependency>
+			<groupId>org.springframework.boot</groupId>
+			<artifactId>spring-boot-starter-security-test</artifactId>
+			<scope>test</scope>
 		</dependency>
 
 		<!-- Exposes production-ready application health and management endpoints. -->

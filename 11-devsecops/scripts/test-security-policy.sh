@@ -148,7 +148,7 @@ MISSING_RECORD_POLICY="${TEMP_DIR}/missing-record.json"
 
 jq '
   .exceptions |=
-  map(select(.id != "SEC-EXC-023"))
+  map(select(.id != "SEC-EXC-017"))
 ' "${EXCEPTION_POLICY}" > "${MISSING_RECORD_POLICY}"
 
 expect_failure \

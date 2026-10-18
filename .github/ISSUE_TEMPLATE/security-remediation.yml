@@ -1,0 +1,121 @@
+# This public template tracks remediation for findings that are already known
+# or safely disclosed. Undisclosed vulnerabilities must use GitHub's private
+# vulnerability-reporting channel instead.
+name: Security Remediation
+description: Track remediation of a security finding that is safe for public disclosure
+title: "security: "
+labels: []
+assignees: []
+
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template only for findings that are safe to track publicly.
+
+        Do not include secrets, credentials, sensitive infrastructure details,
+        exploit code, or previously undisclosed vulnerabilities. Report those
+        privately through the repository Security tab.
+
+  - type: input
+    id: finding_id
+    attributes:
+      label: Finding identifier
+      description: Provide the CVE, GHSA, scanner rule, or internal finding identifier.
+      placeholder: "Example: CVE-2026-00000 or CKV_AWS_000"
+    validations:
+      required: true
+
+  - type: dropdown
+    id: severity
+    attributes:
+      label: Severity
+      description: Select the validated risk rating.
+      options:
+        - Critical
+        - High
+        - Medium
+        - Low
+    validations:
+      required: true
+
+  - type: input
+    id: scanner
+    attributes:
+      label: Detection source
+      description: Identify the scanner, review, alert, or assessment that found the issue.
+      placeholder: "Example: Trivy, Checkov, CodeQL, Dependabot, or manual review"
+    validations:
+      required: true
+
+  - type: textarea
+    id: affected_scope
+    attributes:
+      label: Affected scope
+      description: Identify the affected component without exposing sensitive information.
+      placeholder: |
+        Component:
+        Version:
+        Environment:
+        Relevant files or resources:
+    validations:
+      required: true
+
+  - type: textarea
+    id: risk
+    attributes:
+      label: Risk and business impact
+      description: Explain the realistic confidentiality, integrity, or availability impact.
+    validations:
+      required: true
+
+  - type: textarea
+    id: remediation
+    attributes:
+      label: Remediation plan
+      description: Describe the proposed fix, owner, target date, and rollout approach.
+      placeholder: |
+        Owner:
+        Target date:
+        Proposed fix:
+        Rollback approach:
+    validations:
+      required: true
+
+  - type: textarea
+    id: compensating_controls
+    attributes:
+      label: Compensating controls
+      description: Document temporary protections when immediate remediation is unavailable.
+      placeholder: "Enter None when the finding will be remediated immediately."
+    validations:
+      required: true
+
+  - type: input
+    id: exception
+    attributes:
+      label: Security exception record
+      description: Provide the SEC-EXC identifier when a temporary exception is required.
+      placeholder: "Example: SEC-EXC-024 or None"
+    validations:
+      required: true
+
+  - type: textarea
+    id: validation
+    attributes:
+      label: Required validation
+      description: List the tests and scans that must pass before closure.
+    validations:
+      required: true
+
+  - type: checkboxes
+    id: safeguards
+    attributes:
+      label: Submission safeguards
+      options:
+        - label: This issue does not disclose an unpatched private vulnerability.
+          required: true
+        - label: This issue contains no credentials, secrets, or sensitive customer data.
+          required: true
+        - label: The remediation target follows the applicable security SLA or exception process.
+          required: true

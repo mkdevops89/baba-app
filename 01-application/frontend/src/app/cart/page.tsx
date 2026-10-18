@@ -32,29 +32,85 @@ export default function CartPage() {
 
     const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:8080/api";
 
+    // Perform only the API request here. Keeping the request separate from
+    // React state updates allows the initial effect to cancel an in-flight
+    // request safely if the component unmounts.
+    const requestCart = useCallback(
+        async (signal?: AbortSignal): Promise<BackendCartItem[]> => {
+            const sessionId = getOrCreateSessionId();
+
+            const response = await fetch(
+                `${apiUrl}/cart?sessionId=${encodeURIComponent(sessionId)}`,
+                { signal },
+            );
+
+            if (!response.ok) {
+                throw new Error(`Cart API returned ${response.status}`);
+            }
+
+            return response.json() as Promise<BackendCartItem[]>;
+        },
+        [apiUrl],
+    );
+
+    // Update the cart state and notify other components, such as the navbar,
+    // whenever fresh cart data has been retrieved successfully.
+    const publishCart = useCallback((cartItems: BackendCartItem[]) => {
+        setItems(cartItems);
+        window.dispatchEvent(new Event("baba-cart-updated"));
+    }, []);
+
+    // Refresh the cart after user-initiated mutations. In this path, showing
+    // the loading state immediately is intentional because it follows a click.
     const fetchCart = useCallback(async () => {
         setLoading(true);
         setError(null);
 
         try {
-            const sessionId = getOrCreateSessionId();
-            const response = await fetch(`${apiUrl}/cart?sessionId=${encodeURIComponent(sessionId)}`);
-            if (!response.ok) {
-                throw new Error(`Cart API returned ${response.status}`);
-            }
-            setItems(await response.json());
-            window.dispatchEvent(new Event("baba-cart-updated"));
+            const cartItems = await requestCart();
+            publishCart(cartItems);
         } catch (err) {
             console.error("Failed to load cart:", err);
             setError("Unable to load your cart.");
         } finally {
             setLoading(false);
         }
-    }, [apiUrl]);
+    }, [publishCart, requestCart]);
 
     useEffect(() => {
-        fetchCart();
-    }, [fetchCart]);
+        // Abort the initial request when the component unmounts or apiUrl
+        // changes. This prevents stale requests from updating React state.
+        const abortController = new AbortController();
+
+        const loadInitialCart = async () => {
+            try {
+                const cartItems = await requestCart(abortController.signal);
+
+                if (!abortController.signal.aborted) {
+                    publishCart(cartItems);
+                }
+            } catch (err) {
+                // AbortError is expected during cleanup and should not be
+                // displayed to the user as an application failure.
+                if (abortController.signal.aborted) {
+                    return;
+                }
+
+                console.error("Failed to load cart:", err);
+                setError("Unable to load your cart.");
+            } finally {
+                if (!abortController.signal.aborted) {
+                    setLoading(false);
+                }
+            }
+        };
+
+        void loadInitialCart();
+
+        return () => {
+            abortController.abort();
+        };
+    }, [publishCart, requestCart]);
 
     const updateQuantity = async (productId: number, quantity: number) => {
         const sessionId = getOrCreateSessionId();
