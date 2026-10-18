@@ -187,9 +187,23 @@ The governance workflow prepares run metadata plus Bash syntax, direct policy,
 and negative-control logs. The upload step runs with `if: always()`, fails when
 no evidence files exist, and requests 90-day retention.
 
-The updated artifact behavior must be confirmed in the pull-request workflow
-run after this branch is pushed. Until then, local syntax and configuration
-validation prove the workflow definition, not remote artifact availability.
+Remote artifact validation completed successfully for pull request #72.
+The `DevSecOps Governance` pull-request workflow run
+[`39177215347`](https://github.com/mkdevops89/baba-app/actions/runs/39177215347)
+completed successfully for `refs/pull/72/merge`.
+
+The workflow uploaded artifact
+`devsecops-governance-39177215347-1` on October 18, 2026. GitHub retained
+the artifact through January 16, 2027, confirming the requested 90-day
+retention period. The downloaded artifact contained these nonempty files:
+
+- `run-metadata.json`;
+- `bash-syntax-validation.log`;
+- `security-policy-validation.log`;
+- `security-policy-tests.log`.
+
+This confirms that the governance workflow produces retrievable remote
+evidence in addition to passing its policy-enforcement checks.
 
 ## Final Validation Commands
 
