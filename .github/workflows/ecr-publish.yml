@@ -38,7 +38,7 @@ jobs:
       # Exchange GitHub's short-lived OIDC identity for temporary AWS
       # credentials. No long-lived AWS access keys are stored in GitHub.
       - name: Configure AWS credentials
-        uses: aws-actions/configure-aws-credentials@v5
+        uses: aws-actions/configure-aws-credentials@v6
         with:
           role-to-assume: arn:aws:iam::406312601212:role/baba-app-dev-github-actions-cicd
           aws-region: ${{ env.AWS_REGION }}
